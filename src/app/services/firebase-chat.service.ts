@@ -128,7 +128,7 @@ export class FirebaseChatService {
       this.currentChat?.roomId as string,
       currentMessages as IMessage[]
     );
-    console.log({ currentMessages });
+    // console.log({ currentMessages });
     this._messages$.next(existing);
   }
 
@@ -621,7 +621,7 @@ export class FirebaseChatService {
         fetched.forEach((m) => this.pushMsgToChat(m));
         // currentMap.set(roomId, fetched);
         // this._messages$.next(currentMap);
-        console.log('Messages when no prev ->', fetched);
+        // console.log('Messages when no prev ->', fetched);
         return;
       }
 

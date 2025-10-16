@@ -171,7 +171,6 @@ socialMediaLinks: { platform: string; profile_url: string }[] = [];
   if (!this.receiverId) return;
 
   if (this.chatType === 'group') {
-    // Group DP API call
     this.service.getGroupDp(this.receiverId).subscribe({
       next: (res: any) => {
         this.receiverProfile = res?.group_dp_url || 'assets/images/user.jfif';

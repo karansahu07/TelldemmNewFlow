@@ -255,8 +255,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
 
     const rawId = this.route.snapshot.queryParamMap.get('receiverId') || '';
     const chatTypeParam = this.route.snapshot.queryParamMap.get('isGroup');
-    const phoneFromQuery =
-      this.route.snapshot.queryParamMap.get('receiver_phone');
+    const phoneFromQuery = this.route.snapshot.queryParamMap.get('receiver_phone');
 
     this.chatType = chatTypeParam === 'true' ? 'group' : 'private';
 
@@ -424,10 +423,11 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     await this.chatService.loadMessages();
     this.chatService.syncMessagesWithServer();
     this.chatService.getMessages().subscribe(async (msgs) => {
-      console.log('Received for ui->', msgs);
+      // console.log('Received for ui->', msgs);
       this.groupedMessages = (await this.groupMessagesByDate(
         msgs as any[]
       )) as any[];
+      // console.log("messages", this.groupedMessages)
     });
     this.currentConv = this.chatService.currentChat;
     Keyboard.setScroll({ isDisabled: false });
@@ -943,7 +943,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onMessagePress(message: any) {
-    const index = this.selectedMessages.findIndex((m) => m.key === message.key);
+    const index = this.selectedMessages.findIndex((m) => m.msgId === message.msgId);
     if (index > -1) {
       this.selectedMessages.splice(index, 1);
     } else {
@@ -986,7 +986,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
 
   toggleSelection(msg: any) {
     const index = this.selectedMessages.findIndex(
-      (m) => m.message_id === msg.message_id
+      (m) => m.msgId === msg.msgId
     );
     if (index > -1) {
       this.selectedMessages.splice(index, 1);
@@ -998,12 +998,12 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   isSelected(msg: any) {
-    return this.selectedMessages.some((m) => m.message_id === msg.message_id);
+    return this.selectedMessages.some((m) => m.msgId === msg.msgId);
   }
 
   isQuickReactionOpen(msg: any) {
     return (
-      this.selectedMessages.some((m) => m.message_id === msg.message_id) &&
+      this.selectedMessages.some((m) => m.msgId === msg.msgId) &&
       this.selectedMessages.length === 1
     );
   }
@@ -1585,7 +1585,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     this.isLoadingMore = true;
     try {
       await this.loadFromLocalStorage();
-      await this.loadMessagesFromFirebase(false);
+      // await this.loadMessagesFromFirebase(false);
     } catch (error) {
       console.error('Error loading initial messages:', error);
     } finally {
@@ -1753,7 +1753,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
       this.scrollContainer?.nativeElement?.scrollHeight || 0;
 
     try {
-      await this.loadMessagesFromFirebase(true);
+      // await this.loadMessagesFromFirebase(true);
 
       setTimeout(() => {
         if (this.scrollContainer?.nativeElement) {
@@ -2499,106 +2499,6 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
       default:
         return '';
     }
-  }
-
-  async loadMessagesFromFirebase(loadMore = false) {
-    // try {
-    //   const db = getDatabase();
-    //   const messagesRef = ref(db, `chats/${this.roomId}`);
-    //   let qry;
-    //   if (loadMore && this.lastMessageKey) {
-    //     qry = query(
-    //       messagesRef,
-    //       orderByKey(),
-    //       endBefore(this.lastMessageKey),
-    //       limitToLast(this.limit)
-    //     );
-    //   } else {
-    //     qry = query(messagesRef, orderByKey(), limitToLast(this.limit));
-    //   }
-    //   const snapshot = await get(qry);
-    //   if (snapshot.exists()) {
-    //     const messagesData = snapshot.val();
-    //     const messageKeys = Object.keys(messagesData).sort();
-    //     const decryptTasks = messageKeys.map(async (key) => {
-    //       const msg = messagesData[key];
-    //       // decrypt text
-    //       let decryptedText = '';
-    //       try {
-    //         decryptedText = await this.encryptionService.decrypt(
-    //           msg.text || ''
-    //         );
-    //       } catch (e) {
-    //         console.warn('decrypt text failed for key', key, e);
-    //         decryptedText = '';
-    //       }
-    //       // decrypt attachment.caption if present
-    //       if (msg.attachment && msg.attachment.caption) {
-    //         try {
-    //           const decryptedCaption = await this.encryptionService.decrypt(
-    //             msg.attachment.caption
-    //           );
-    //           msg.attachment.caption = decryptedCaption; // overwrite with plaintext
-    //           // OR: msg.attachment.captionPlain = decryptedCaption;
-    //         } catch (e) {
-    //           console.warn('decrypt attachment caption failed for key', key, e);
-    //         }
-    //       }
-    //       return {
-    //         ...msg,
-    //         key: key,
-    //         text: decryptedText,
-    //       } as Message;
-    //     });
-    //     const results = await Promise.all(decryptTasks);
-    //     // -----------------------
-    //     // FILTER OUT MESSAGES HIDDEN FOR THIS USER (deletedFor / deletedForEveryone)
-    //     // -----------------------
-    //     const filteredResults = results.filter((msg: Message) => {
-    //       // if applyDeletionFilters returns true -> message should be hidden for current user
-    //       try {
-    //         return !this.applyDeletionFilters(msg);
-    //       } catch (e) {
-    //         // fail open (show message) if filter crashes
-    //         console.warn(
-    //           'applyDeletionFilters error while loading firebase messages',
-    //           e
-    //         );
-    //         return true;
-    //       }
-    //     });
-    //     // Merge into allMessages / displayedMessages keeping chronological order
-    //     if (loadMore) {
-    //       // older messages prepended (results are sorted ascending by key/name)
-    //       this.allMessages = [...filteredResults, ...this.allMessages];
-    //       this.displayedMessages = [
-    //         ...filteredResults,
-    //         ...this.displayedMessages,
-    //       ];
-    //     } else {
-    //       this.allMessages = filteredResults;
-    //       this.displayedMessages = filteredResults;
-    //     }
-    //     // Keep lastMessageKey based on raw results (so pagination works even when some were filtered out)
-    //     if (results.length > 0 && results[0]?.key) {
-    //       this.lastMessageKey = results[0].key;
-    //     }
-    //     // hasMoreMessages should be true if the query returned 'limit' keys (raw)
-    //     this.hasMoreMessages = messageKeys.length === this.limit;
-    //     this.groupedMessages = await this.groupMessagesByDate(
-    //       this.displayedMessages
-    //     );
-    //     this.saveToLocalStorage();
-    //     await this.markDisplayedMessagesAsRead();
-    //   } else {
-    //     this.hasMoreMessages = false;
-    //   }
-    // } catch (error) {
-    //   console.error('Error loading messages from Firebase:', error);
-    // }
-    // this.chatService.getMessages().subscribe((messages) => {
-    //   console.log('message', messages);
-    // });
   }
 
   async addReaction(msg: IMessage, emoji: string) {
