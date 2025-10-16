@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "236194781114",
+    "firebase_url": "https://telldemmchat-default-rtdb.firebaseio.com",
+    "project_id": "telldemmchat",
+    "storage_bucket": "telldemmchat.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:236194781114:android:2a66eb309ffd4df1f8ef83",
+        "android_client_info": {
+          "package_name": "com.ekarigar.telldemm"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBtJEn6pKBOd3hrOPl5YUir5ID6G4OOK0c"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,0 +1,472 @@
+/* =========================
+   Tokenized Welcome / OTP Page
+   ========================= */
+
+ion-content {
+  --background: var(--ion-background-color);
+}
+
+/* page shell */
+.background {
+  --background: var(--ion-card-background);
+  --background-color: var(--ion-card-background);
+  box-shadow: 0 0 8px 8px color-mix(in srgb, var(--ion-text-color) 6%, transparent);
+}
+
+/* Toolbar / titles */
+ion-toolbar {
+  --background: var(--ion-toolbar-background);
+  color: var(--ion-text-color);
+}
+ion-title {
+  text-align: center;
+  font-size: 20px;
+  font-family: Montserrat-bold;
+}
+ion-content {
+  --background: var(--ion-background-color);
+}
+
+/* Page layout */
+.Lorem-main { display: flex; flex-direction: column; height: 100%; }
+.Lorem { width: 100%; display: flex; justify-content: center; }
+
+.Lorem p {
+  text-align: center;
+  color: var(--ion-text-color);
+  font-size: 18px;
+  width: 94%;
+  font-family: 'Montserrat-Medium';
+}
+
+/* Country select */
+.main-dropdown { text-align: center; display: flex; flex-direction: column; align-items: center; }
+
+.drop-down {
+  color: var(--ion-text-color);
+  border: none;
+  background: transparent;
+  font-size: 16px;
+  width: 25%;
+  font-family: Montserrat-Medium;
+  outline: none;
+}
+
+/* underline (was translucent red) -> tinted primary */
+.underline-text {
+  display: inline-block;
+  border-bottom: 2px solid color-mix(in srgb, var(--ion-color-primary) 27%, transparent);
+  padding-bottom: 0;
+  width: 63%;
+}
+
+/* Country + phone input row */
+.main-country { display: flex; justify-content: center; gap: 15px; margin-top: 20px; }
+
+.country-code { width: 11%; margin-top: 2px; }
+
+.count-code {
+  color: var(--ion-text-color);
+  margin: 0;
+  font-family: Montserrat-bold;
+  font-weight: bold;
+  font-size: 16px;
+  text-align: center;
+}
+
+/* underlines for inputs */
+.underline-country {
+  border-bottom: 2px solid color-mix(in srgb, var(--ion-color-primary) 27%, transparent);
+  margin: 0;
+}
+
+/* Phone input */
+.phone-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 45%;
+}
+.phone-wrapper input {
+  background: transparent;
+  color: var(--ion-text-color);
+  border: none;
+  outline: none;
+  text-align: left;
+  font-size: 16px;
+  font-family: Montserrat-Medium;
+  width: 100%;
+}
+.phone-wrapper .underline-country {
+  border-bottom: 2px solid color-mix(in srgb, var(--ion-color-primary) 27%, transparent);
+  width: 100%;
+}
+
+/* remove spin buttons once */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Validation text (was red) -> use danger token */
+.required-line {
+  color: var(--ion-color-danger);
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Agree & Continue button area */
+.agree-div {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 70px;
+}
+
+/* Button: gradient derived from primary and a darker mix of primary */
+.agree-div button {
+  height: 55px;
+  width: 90%;
+  border-radius: 15px;
+  font-family: Montserrat-bold;
+  font-weight: bold;
+  color: var(--ion-color-primary-contrast);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s, opacity 0.3s;
+  background: linear-gradient(
+    175deg,
+    var(--ion-color-primary) 0%,
+    color-mix(in srgb, var(--ion-color-primary) 60%, var(--ion-color-dark) 40%) 50%
+  );
+}
+.agree-div button:disabled {
+  background-color: color-mix(in srgb, var(--ion-color-medium) 25%, transparent);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Card style for OTP modal */
+.backgrounds {
+  background: var(--ion-card-background);
+  width: 90%;
+  border-radius: 10px;
+  box-shadow: 4px 4px 10px color-mix(in srgb, var(--ion-text-color) 20%, transparent);
+  padding: 14px;
+}
+
+/* OTP title */
+.opt {
+  text-align: center;
+  height: 65px;
+  color: var(--ion-text-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 10px;
+}
+.opt p {
+  margin: 0;
+  font-size: 18px;
+  font-family: Montserrat-bold;
+  font-weight: bold;
+  color: var(--ion-text-color);
+}
+
+/* subtle divider (was light bluish) -> use primary tint */
+.border-line {
+  border: 1px solid color-mix(in srgb, var(--ion-color-primary) 18%, var(--ion-border-color));
+  margin: 8px 0;
+}
+
+/* OTP input wrapper */
+.otp-input-wrapper { display: flex; justify-content: center; margin-top: 8px; }
+
+// /* OTP inputs — tokenized borders/text */
+// .custom-otp-input input,
+// .custom-otp-input .otp-input input,
+// ion-input-otp input {
+//   width: 44px;
+//   height: 44px;
+//   background: transparent;
+//   outline: none;
+//   border: 1px solid var(--ion-border-color);
+//   color: var(--ion-text-color) !important;
+//   -webkit-text-fill-color: var(--ion-text-color) !important;
+//   font-size: 30px;
+//   text-align: center;
+//   border-radius: 5px;
+//   caret-color: var(--ion-text-color);
+//   box-sizing: border-box;
+// }
+
+// /* fallback for deep selectors */
+// .custom-otp-input ::ng-deep input {
+//   color: var(--ion-text-color) !important;
+//   -webkit-text-fill-color: var(--ion-text-color) !important;
+// }
+
+/* =========================
+   Responsive OTP inputs
+   ========================= */
+
+/* Container that holds each OTP input cell */
+.custom-otp-input,
+.custom-otp-input .otp-input,
+ion-input-otp {
+  display: flex;
+  justify-content: center;
+  gap: clamp(8px, 1.6vw, 14px); /* spacing between cells scales */
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 6px 8px;
+}
+
+/* Individual input cells: scale with viewport but keep minimum touch target */
+.custom-otp-input input,
+.custom-otp-input .otp-input input,
+ion-input-otp input,
+.custom-otp-input ::ng-deep input {
+  /* size scales: min 38px, preferred ~6vw, max 60px */
+  width: clamp(38px, 6vw, 56px);
+  height: clamp(38px, 6vw, 56px);
+
+  /* font scales accordingly */
+  font-size: clamp(20px, 3.2vw, 30px);
+  line-height: 1;
+  text-align: center;
+  border-radius: 8px;
+  border: 1px solid var(--ion-border-color);
+  background: transparent;
+  color: var(--ion-text-color) !important;
+  -webkit-text-fill-color: var(--ion-text-color) !important;
+  caret-color: var(--ion-color-primary);
+  box-sizing: border-box;
+  transition: border-color 160ms ease, box-shadow 160ms ease, transform 120ms ease;
+  -moz-appearance: textfield;
+  appearance: textfield;
+  outline: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* Remove number input spinner UI (redundant but safe) */
+.custom-otp-input input[type="number"]::-webkit-inner-spin-button,
+.custom-otp-input input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Focus state — clear accessible highlight */
+.custom-otp-input input:focus,
+.custom-otp-input ::ng-deep input:focus {
+  border-color: color-mix(in srgb, var(--ion-color-primary) 65%, transparent);
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--ion-color-primary) 12%, transparent);
+  transform: translateY(-1px);
+}
+
+/* Filled state — subtle background to indicate entry */
+.custom-otp-input input.filled,
+.custom-otp-input ::ng-deep input.filled {
+  background: color-mix(in srgb, var(--ion-color-primary) 6%, transparent);
+  border-color: color-mix(in srgb, var(--ion-color-primary) 45%, transparent);
+}
+
+/* Error / invalid state (use when OTP invalid) */
+.custom-otp-input input.invalid,
+.custom-otp-input ::ng-deep input.invalid {
+  border-color: var(--ion-color-danger);
+  box-shadow: 0 3px 10px color-mix(in srgb, var(--ion-color-danger) 12%, transparent);
+  animation: wobble 220ms ease;
+}
+
+/* Disabled look */
+.custom-otp-input input:disabled,
+.custom-otp-input ::ng-deep input:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+/* Make sure each input remains visually separate on light/dark themes */
+.custom-otp-input input {
+  backdrop-filter: blur(0.5px);
+}
+
+/* Fine-tune for very small screens (phones) */
+@media (max-width: 420px) {
+  .custom-otp-input,
+  .custom-otp-input .otp-input,
+  ion-input-otp {
+    gap: 8px;
+    padding: 4px 6px;
+  }
+
+  .custom-otp-input input,
+  .custom-otp-input ::ng-deep input {
+    width: clamp(36px, 8vw, 46px);
+    height: clamp(36px, 8vw, 46px);
+    font-size: clamp(18px, 4.2vw, 24px);
+    border-radius: 6px;
+  }
+}
+
+/* Larger devices: reduce visual weight slightly */
+@media (min-width: 900px) {
+  .custom-otp-input input,
+  .custom-otp-input ::ng-deep input {
+    width: clamp(44px, 4.2vw, 56px);
+    height: clamp(44px, 4.2vw, 56px);
+    font-size: clamp(22px, 2.2vw, 30px);
+  }
+}
+
+/* subtle entrance animation for OTP modal inputs */
+@keyframes otpAppear {
+  from { opacity: 0; transform: translateY(6px) scale(.98); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.custom-otp-input input {
+  animation: otpAppear 220ms ease both;
+}
+
+/* small wobble for invalid feedback */
+@keyframes wobble {
+  0% { transform: translateX(0); }
+  25% { transform: translateX(-4px); }
+  50% { transform: translateX(3px); }
+  75% { transform: translateX(-2px); }
+  100% { transform: translateX(0); }
+}
+
+/* Accessibility notes (visual only) */
+/* - Ensure each <input> has aria-label or aria-labelledby and inputmode="numeric" on template side */
+/* - Use JS to toggle 'filled' class when a cell has a digit, and toggle 'invalid' on verification failure */
+
+
+/* Submit button inside OTP popup */
+.submit { width: 100%; display: flex; justify-content: center; margin-top: 5%; margin-bottom: 5%; }
+
+.submit button {
+  height: 45px;
+  width: 76%;
+  border-radius: 15px;
+  font-family: Montserrat-bold;
+  font-weight: bold;
+  color: var(--ion-color-primary-contrast);
+  padding: 10px 20px;
+  border: none;
+  border-radius: 30px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background-color 0.3s, opacity 0.3s;
+  background: linear-gradient(
+    175deg,
+    var(--ion-color-primary) 0%,
+    color-mix(in srgb, var(--ion-color-primary) 60%, var(--ion-color-dark) 40%) 50%
+  );
+}
+.submit button:disabled {
+  background-color: color-mix(in srgb, var(--ion-color-medium) 25%, transparent);
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Fullpage OTP overlay — tokenized backdrop */
+.otp-popup-wrapper {
+  position: fixed; top: 0; left: 0; z-index: 9999; width: 100%; height: 100%;
+  background: color-mix(in srgb, var(--ion-text-color) 10%, transparent);
+  display: flex; justify-content: center; align-items: center;
+}
+
+/* Blur class applied to background when OTP modal open */
+.blurred {
+  filter: blur(1px);
+  pointer-events: none;
+  user-select: none;
+  background-color: color-mix(in srgb, var(--ion-card-background) 30%, transparent);
+}
+
+/* Resend section */
+.resend-section {
+  text-align: center;
+  color: var(--ion-color-medium);
+  margin-top: 10px;
+}
+.resend-section span { cursor: pointer; font-weight: 500; color: var(--ion-color-primary); }
+
+/* Confirm popup (tokenized) */
+.confirm-popup::part(backdrop) {
+  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--ion-text-color) 12%, transparent);
+}
+.confirm-popup::part(content) {
+  padding: 0;
+  background: transparent;
+  box-shadow: none;
+  position: relative;
+}
+
+/* Popup container */
+.popup-container {
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--ion-card-background);
+  padding: 24px;
+  border-radius: 16px;
+  width: 90%; max-width: 350px;
+  text-align: center;
+  box-shadow: 0 10px 20px color-mix(in srgb, var(--ion-text-color) 18%, transparent);
+  animation: fadeInScale 0.3s ease;
+}
+.popup-message { font-size: 16px; color: color-mix(in srgb, var(--ion-text-color) 70%, transparent); }
+.popup-number { font-size: 20px; margin: 12px 0; font-weight: 600; color: var(--ion-text-color); }
+
+.popup-buttons { display:flex; justify-content:space-between; gap:12px; margin-top:20px; }
+.popup-btn { flex:1; padding:10px 0; font-size:16px; border-radius:8px; border:none; cursor:pointer; }
+.popup-btn.edit {
+  background: var(--chat-input-icon);
+  color: var(--ion-text-color);
+}
+.popup-btn.ok {
+  background: var(--ion-color-primary);
+  color: var(--ion-color-primary-contrast);
+}
+
+@keyframes fadeInScale {
+  from { opacity:0; transform: translate(-50%,-45%) scale(0.95); }
+  to   { opacity:1; transform: translate(-50%,-50%) scale(1); }
+}
+
+/* email wrapper */
+.email-wrapper { display:flex; flex-direction:column; align-items:center; width:75%; margin:0 auto; }
+.email-wrapper input {
+  background: transparent;
+  color: var(--ion-text-color);
+  border: none;
+  outline: none;
+  text-align: center;
+  font-size: 16px;
+  font-family: Montserrat-Medium;
+  width:100%;
+}
+.email-wrapper .underline-country {
+  border-bottom: 2px solid color-mix(in srgb, var(--ion-color-primary) 27%, transparent);
+  width: 100%;
+}
+
+/* Responsive tweaks */
+@media (max-width: 420px) {
+  .agree-div { margin-top: 40px; }
+  .count-code { font-size: 14px; }
+  .custom-otp-input input, .custom-otp-input .otp-input input { width: 38px; height: 38px; font-size: 24px; }
+}
+
+

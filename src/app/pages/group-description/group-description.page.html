@@ -1,0 +1,56 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-icon name="arrow-back-outline" slot="start" style="font-size: 24px; cursor: pointer; margin-right: 10px;"
+          (click)="cancel()"></ion-icon>
+    <ion-title>Edit Group Description</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <!-- <ion-textarea
+  [(ngModel)]="description"
+  placeholder="Enter group description"
+  auto-grow="true"
+  style="--background: #f1f1f1; --padding-start: 5px; border-radius: 25px;"
+></ion-textarea> -->
+
+<ion-textarea
+  [(ngModel)]="description"
+  placeholder="Enter group description"
+  auto-grow="true"
+  style="--background: #e0e0e0; border-radius: 25px; --padding-start: 15px; --padding-end: 15px;"
+></ion-textarea>
+
+
+<!-- <div class="textarea-wrapper">
+  <ion-textarea
+    [(ngModel)]="description"
+    placeholder="Enter group description"
+    auto-grow="true"
+    class="custom-textarea"
+  ></ion-textarea>
+</div> -->
+
+
+
+  <div class="button-row" style="display: flex; justify-content: space-evenly;">
+  <ion-button
+    expand="block"
+    style="--background: grey; --color: #fff;"
+    (click)="cancel()"
+  >
+    Cancel
+  </ion-button>
+
+  <ion-button
+    expand="block"
+    style="--background: linear-gradient(175deg, rgba(239, 111, 101, 1) 0%, rgba(110, 25, 17, 1) 50%); --color: #fff;"
+    (click)="saveDescription()"
+  >
+    Save
+  </ion-button>
+</div>
+
+
+
+</ion-content>

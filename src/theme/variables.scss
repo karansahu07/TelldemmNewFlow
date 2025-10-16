@@ -1,0 +1,79 @@
+/* Ionic Theme Variables - Red (#FF1414) Based with High Contrast (body-scoped) */
+
+/** Base (Light) **/
+body {
+  --ion-color-primary: #ff1414;
+  --ion-color-primary-rgb: 255, 20, 20;
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: #e01313;
+  --ion-color-primary-tint: #f5afaf;
+
+  --ion-background-color: #ffffff;
+  --ion-text-color: #0b0b0b;
+
+  --ion-toolbar-background: #ffffff;
+  --ion-toolbar-color: #0b0b0b; /* fixed: was white on white */
+
+  --ion-item-background: #ffffff;
+  --ion-card-background: #ffffff;
+  --ion-border-color: #e7e7e7;
+
+  --chat-bubble-sent: #ffe5e5;
+  --chat-bubble-received: #ffffff;
+  --chat-bubble-text: #303030;
+
+  --chat-input-bg: #ffffff;
+  --chat-input-text: #0b0b0b;
+  --chat-input-icon: #9b9b9b;
+
+  /* Focus ring shared */
+  // --focus-ring: 0 0 0 3px rgba(255, 20, 20, 0.35);
+}
+
+
+
+/* Manual override: force High Contrast when this class is on <body> */
+body.accessibility-high-contrast {
+  --ion-background-color: #ffffff;   /* pure black */
+  --ion-text-color: #000000;         /* pure white */
+
+  --ion-toolbar-background: #ffffff;
+  --ion-toolbar-color: #000000;
+
+
+
+  --ion-color-primary: #a80606;      /* brand red */
+  --ion-color-primary-contrast: #000000;
+  --ion-color-primary-shade: #d81212;
+  --ion-color-primary-tint: #c55454;
+
+
+  --ion-item-background: #ffffff;
+  --ion-card-background: #ffffff;
+  --ion-border-color: #e7e7e7;
+
+  --chat-bubble-sent: #ffe5e5;
+  --chat-bubble-received: #ffffff;
+  --chat-bubble-text: #303030;
+
+  --chat-input-bg: #ffffff;
+  --chat-input-text: #0b0b0b;
+  --chat-input-icon: #9b9b9b;
+
+
+  /* Strong focus outline */
+//   --focus-ring: 0 0 0 3px #a80606, 0 0 0 5px #ffffff;
+}
+
+/* Consistent focus style across modes */
+// :where(button, [role="button"], a, input, textarea, select, .focusable):focus-visible {
+//   outline: none;
+//   box-shadow: var(--focus-ring);
+//   border-radius: 8px;
+// }
+
+// /* Borders on list items/cards using your tokens */
+// ion-item, .item, .card, ion-card {
+//   border-color: var(--ion-border-color) !important;
+// }

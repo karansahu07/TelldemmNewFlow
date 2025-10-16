@@ -1,0 +1,44 @@
+<ion-header class="red-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/chatting-screen"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Message info</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="red-theme-content">
+
+  <!-- Message Bubble -->
+  <div class="message-bubble sender">
+    <p class="text">{{ message?.text }}</p>
+    <span class="time">{{ formatDate(message?.timestamp) }}</span>
+    <ion-icon
+      name="checkmark-done-outline"
+      class="status-icon"
+      [ngClass]="{ read: message?.read, delivered: !message?.read }"
+    ></ion-icon>
+  </div>
+
+  <!-- Info Section -->
+  <ion-list>
+    <ion-item>
+      <ion-icon name="checkmark-done-outline" slot="start" class="status-icon read"></ion-icon>
+      <ion-label>
+        <h2>Read</h2>
+        <p *ngIf="message?.read; else notRead">{{ formatDate(message?.readAt) }}</p>
+        <ng-template #notRead><span>Not read yet</span></ng-template>
+      </ion-label>
+    </ion-item>
+
+    <ion-item>
+      <ion-icon name="checkmark-done-outline" slot="start" class="status-icon delivered"></ion-icon>
+      <ion-label>
+        <h2>Delivered</h2>
+        <p *ngIf="message?.delivered; else notDelivered">{{ formatDate(message?.deliveredAt) }}</p>
+        <ng-template #notDelivered><span>Not delivered yet</span></ng-template>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+</ion-content>

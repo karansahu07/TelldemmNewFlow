@@ -1,0 +1,32 @@
+page-privacy {
+  /* List surface uses theme background */
+  ion-list {
+    background: var(--ion-background-color);
+    --ion-item-background: var(--ion-item-background, var(--ion-background-color));
+    --ion-item-color: var(--ion-text-color);
+  }
+
+  /* Optional: section headers inside privacy list */
+  ion-list-header {
+    font-size: 0.85rem;
+    font-weight: 600;
+    letter-spacing: 0.3px;
+    color: color-mix(in srgb, var(--ion-text-color) 65%, transparent);
+    padding-top: 12px;
+    padding-bottom: 6px;
+    text-transform: uppercase;
+  }
+
+  /* Optional: muted description text */
+  .sub-label {
+    font-size: 0.9rem;
+    color: color-mix(in srgb, var(--ion-text-color) 55%, transparent);
+  }
+
+  /* Focus accessibility */
+  ion-item:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: 8px;
+  }
+}

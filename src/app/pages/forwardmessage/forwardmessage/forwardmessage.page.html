@@ -1,0 +1,167 @@
+ <ion-header [translucent]="true">
+  <ion-toolbar class="telldemm">
+    <ion-buttons slot="start">
+      <ion-icon name="arrow-back-outline" (click)="goBack()" class="person"></ion-icon>
+      <span class="Forward">Forward to …...</span>
+    </ion-buttons>
+
+    <ion-buttons slot="end">
+      <ion-button>
+        <ion-icon name="person-add-outline" class="person"></ion-icon>
+      </ion-button>
+      <ion-button>
+        <ion-icon name="search-outline" class="person"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+
+  <!-- Status Section -->
+  <ion-list *ngIf="statusList.length > 0">
+    <ion-item *ngFor="let status of statusList" (click)="toggleSelection(status.name)">
+      <ion-avatar slot="start" class="avatar-container">
+        <img [src]="status.avatar || 'assets/images/user.jfif'" />
+        <ion-icon
+          *ngIf="selectedUsers.has(status.name)"
+          name="checkmark-circle"
+          class="check-overlay"
+        ></ion-icon>
+      </ion-avatar>
+
+      <ion-label>
+        <p class="chat-message">{{ status.name }}</p>
+        <p>{{ status.subtitle }}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <!-- Frequently Contacted -->
+  <!-- <p class="Frequently" *ngIf="frequentlyContacted.length > 0">Frequently contacted</p>
+  <ion-list>
+    <ion-item *ngFor="let user of frequentlyContacted" (click)="toggleSelection(user.name)">
+      <ion-avatar slot="start" class="avatar-container">
+        <img [src]="user.avatar || 'assets/images/user.jfif'" />
+        <ion-icon
+          *ngIf="selectedUsers.has(user.name)"
+          name="checkmark-circle"
+          class="check-overlay"
+        ></ion-icon>
+      </ion-avatar>
+      <ion-label>
+        <p class="chat-message">{{ user.name }}</p>
+        <p>{{ user.subtitle }}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list> -->
+
+  <!-- Heading -->
+<p class="Frequently" *ngIf="!isLoadingContacts && matchedContacts.length > 0">
+  Frequently contacted
+</p>
+
+<!-- Skeleton Loader -->
+<ion-list *ngIf="isLoadingContacts">
+  <ion-item *ngFor="let skeleton of [].constructor(6)">
+    <ion-avatar slot="start">
+      <ion-skeleton-text animated style="width: 40px; height: 40px; border-radius: 50%;"></ion-skeleton-text>
+    </ion-avatar>
+    <ion-label>
+      <p><ion-skeleton-text animated style="width: 60%;"></ion-skeleton-text></p>
+      <p><ion-skeleton-text animated style="width: 40%;"></ion-skeleton-text></p>
+    </ion-label>
+  </ion-item>
+</ion-list>
+
+<!-- Real Contact List -->
+<!-- <ion-list *ngIf="!isLoadingContacts">
+  <ion-item *ngFor="let user of matchedContacts" (click)="toggleSelection(user.name)">
+    <ion-avatar slot="start" class="avatar-container">
+      <img [src]="user.avatar || 'assets/images/user.jfif'" />
+      <ion-icon
+        *ngIf="selectedUsers.has(user.name)"
+        name="checkmark-circle"
+        class="check-overlay"
+      ></ion-icon>
+    </ion-avatar>
+    <ion-label>
+      <p class="chat-message">{{ user.name }}</p>
+      <p>{{ user.subtitle }}</p>
+    </ion-label>
+  </ion-item>
+</ion-list> -->
+
+<ion-list *ngIf="!isLoadingContacts">
+  <ion-item *ngFor="let user of matchedContacts" (click)="toggleSelection(user)">
+    <ion-avatar slot="start" class="avatar-container">
+      <img [src]="user.avatar || 'assets/images/user.jfif'" />
+      <ion-icon
+        *ngIf="user.selected"
+        name="checkmark-circle"
+        class="check-overlay"
+      ></ion-icon>
+    </ion-avatar>
+    <ion-label>
+      <p class="chat-message">{{ user.name }}</p>
+      <p>{{ user.subtitle }}</p>
+    </ion-label>
+  </ion-item>
+</ion-list>
+
+
+
+
+
+  <!-- Recent Chats -->
+  <!-- <p class="Frequently" *ngIf="filteredChats.length > 0">Recent chats</p>
+  <ion-list>
+    <ion-item
+      *ngFor="let chat of filteredChats"
+      (click)="toggleSelection(chat.name)"
+      [class.selected]="selectedUsers.has(chat.name)"
+    >
+      <ion-avatar slot="start" class="avatar-container">
+        <img [src]="chat.avatar || 'assets/images/user.jfif'" />
+        <ion-icon
+          *ngIf="selectedUsers.has(chat.name)"
+          name="checkmark-circle"
+          class="check-overlay"
+        ></ion-icon>
+      </ion-avatar>
+
+      <ion-label>
+        <p class="chat-message">{{ chat.name }}</p>
+        <p [style.color]="chat.unread ? '#FF1414' : '#444343'">
+          <ng-container [ngSwitch]="chat.messageStatus">
+            <img *ngSwitchCase="'sent'" src="assets/images/read.svg" class="tick-icon" />
+            <img *ngSwitchCase="'seen'" src="assets/images/double-tick.svg" class="tick-seen" />
+          </ng-container>
+          {{ chat.message }}
+        </p>
+      </ion-label>
+
+      <div slot="end" class="chat-meta">
+        <p class="time">{{ chat.time }}</p>
+        <ion-badge *ngIf="chat.unreadCount > 0" color="danger" class="unread-badge">
+          {{ chat.unreadCount }}
+        </ion-badge>
+      </div>
+    </ion-item>
+  </ion-list> -->
+
+</ion-content>
+
+<ion-footer *ngIf="selectedContacts.length > 0" class="selected-footer">
+  <ion-toolbar>
+    <div class="selected-names">
+      {{ selectedNames }}
+    </div>
+    <ion-buttons slot="end">
+      <ion-button (click)="sendForward()">
+        <ion-icon name="send" slot="icon-only" class="multi-send"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-footer>
+

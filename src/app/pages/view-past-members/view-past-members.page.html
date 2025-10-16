@@ -1,0 +1,25 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/group-details"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Past Members</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <ion-list *ngIf="pastMembers.length > 0">
+    <ion-item *ngFor="let member of pastMembers">
+      <ion-label>
+        <h2>{{ member.name }}</h2>
+        <p>{{ member.phone_number }}</p>
+        <!-- <ion-badge color="medium">{{ member.status }}</ion-badge> -->
+         <p>left or remove {{member.removedAt}}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <div *ngIf="pastMembers.length === 0" class="ion-text-center">
+    <p>No past members found.</p>
+  </div>
+</ion-content>

@@ -1,0 +1,35 @@
+page-invite-friend {
+  /* List surface */
+  ion-list {
+    background: var(--ion-background-color);
+    --ion-item-background: var(--ion-item-background, var(--ion-background-color));
+    --ion-item-color: var(--ion-text-color);
+  }
+
+  /* Optional: subtitle/description text */
+  .sub-label {
+    font-size: 0.9rem;
+    color: color-mix(in srgb, var(--ion-text-color) 60%, transparent);
+  }
+
+  /* Optional: compact invite button row */
+  .invite-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 12px;
+
+    ion-button {
+      flex: 1;
+      --border-radius: 10px;
+      font-weight: 600;
+    }
+  }
+
+  /* Accessibility */
+  ion-item:focus-visible,
+  ion-button:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: 8px;
+  }
+}

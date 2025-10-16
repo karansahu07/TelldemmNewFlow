@@ -1,0 +1,48 @@
+<ion-header>
+  <ion-toolbar style="--background: #f0f0f0; --color: #000000;">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/settings"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'helpPage.title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding" style="--background: #ffffff;">
+  <ion-list lines="inset">
+    <!-- Help Center -->
+    <ion-item button detail (click)="openHelpCenter()">
+      <ion-icon slot="start" name="help-circle-outline"></ion-icon>
+      <ion-label>
+        <h2>{{ 'helpPage.helpCenter.title' | translate }}</h2>
+        <p>{{ 'helpPage.helpCenter.description' | translate }}</p>
+      </ion-label>
+    </ion-item>
+
+    <!-- Terms & Privacy -->
+    <ion-item button detail (click)="openTerms()">
+      <ion-icon slot="start" name="document-outline"></ion-icon>
+      <ion-label>
+        <h2>{{ 'helpPage.terms.title' | translate }}</h2>
+        <p>{{ 'helpPage.terms.description' | translate }}</p>
+      </ion-label>
+    </ion-item>
+
+    <!-- Channel Reports -->
+    <ion-item button detail (click)="openChannelReports()">
+      <ion-icon slot="start" name="alert-outline"></ion-icon>
+      <ion-label>
+        <h2>{{ 'helpPage.channelReports.title' | translate }}</h2>
+        <p>{{ 'helpPage.channelReports.description' | translate }}</p>
+      </ion-label>
+    </ion-item>
+
+    <!-- App Info -->
+    <ion-item button detail (click)="openAppInfo()">
+      <ion-icon slot="start" name="information-circle-outline"></ion-icon>
+      <ion-label>
+        <h2>{{ 'helpPage.appInfo.title' | translate }}</h2>
+        <p>{{ 'helpPage.appInfo.description' | translate }}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+</ion-content>

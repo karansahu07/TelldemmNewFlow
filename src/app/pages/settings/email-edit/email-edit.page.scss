@@ -1,0 +1,96 @@
+.page-content {
+--background: #ffffff;
+}
+
+
+.container {
+max-width: 720px;
+margin: 24px auto;
+padding: 0 16px;
+}
+
+
+.center-card {
+background: #fff;
+border-radius: 14px;
+text-align: center;
+padding: 32px 20px;
+box-shadow: none;
+}
+
+
+.icon-section {
+margin-bottom: 16px;
+}
+
+
+.email-icon {
+font-size: 72px;
+color: var(--ion-color-primary);
+}
+
+
+.center-text {
+margin: 0 0 20px 0;
+font-size: 14px;
+color: #666;
+}
+
+
+.email-info {
+text-align: left;
+margin-top: 20px;
+}
+
+
+.email-info label {
+font-size: 14px;
+color: #999;
+}
+
+
+.email-row {
+display: flex;
+justify-content: space-between;
+align-items: center;
+font-size: 16px;
+margin-top: 6px;
+}
+
+
+.email-row strong {
+font-weight: 600;
+}
+
+
+.verified {
+display: flex;
+align-items: center;
+gap: 6px;
+margin-top: 10px;
+color: var(--ion-color-primary);
+font-size: 14px;
+}
+
+
+.verified-icon {
+font-size: 18px;
+}
+
+
+.edit-form {
+margin-top: 20px;
+text-align: left;
+}
+
+
+.actions {
+display: flex;
+gap: 12px;
+margin-top: 16px;
+}
+
+
+.actions ion-button {
+flex: 1;
+}

@@ -1,0 +1,50 @@
+<ion-header translucent>
+  <ion-toolbar color="light">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/setting-profile"></ion-back-button>
+    </ion-buttons>
+    <ion-title>About</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding update-status-page">
+  <div class="current-label">
+    <h3>Currently set to</h3>
+    <div class="current-chip">
+      <span>{{ status }}</span>
+      <ion-button fill="clear" size="small" (click)="status = ''">
+        <ion-icon name="pencil-outline"></ion-icon>
+      </ion-button>
+    </div>
+  </div>
+
+  <form (ngSubmit)="saveStatus()">
+    <ion-item class="status-input-item">
+      <ion-input
+        placeholder="Type your status"
+        [(ngModel)]="status"
+        name="statusInput"
+        maxlength="50"
+        clear-input>
+      </ion-input>
+    </ion-item>
+
+    <ion-button
+      expand="block"
+      color="danger"
+      type="submit"
+      [disabled]="!status || status.trim().length === 0 || isSaving">
+      Save
+    </ion-button>
+  </form>
+
+  <div class="divider"><span>Select About</span></div>
+
+  <ion-list>
+    <ion-item *ngFor="let st of commonStatuses" button (click)="fillCommon(st)">
+      <ion-label>
+        {{ st }}
+      </ion-label>
+    </ion-item>
+  </ion-list>
+</ion-content>

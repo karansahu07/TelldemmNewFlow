@@ -1,0 +1,59 @@
+<ion-header>
+  <ion-toolbar style="--background: #f0f0f0; --color: #000000;">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/settings"></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>{{ 'invite.header' | translate }}</ion-title>
+
+    <ion-buttons slot="end">
+      <ion-button fill="clear" (click)="searchContacts()" [attr.aria-label]="'invite.actions.search' | translate">
+        <ion-icon slot="icon-only" name="search-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding" style="--background: #ffffff;">
+  <!-- Quick Actions -->
+  <ion-list lines="inset">
+    <ion-item button detail (click)="shareLink()" [attr.aria-label]="'invite.actions.shareLink' | translate">
+      <ion-icon slot="start" name="share-social-outline" color="success"></ion-icon>
+      <ion-label>
+        <h2>{{ 'invite.share.title' | translate }}</h2>
+        <p>{{ 'invite.share.subtitle' | translate }}</p>
+      </ion-label>
+    </ion-item>
+
+    <ion-item button detail (click)="openContacts()" [attr.aria-label]="'invite.actions.fromContacts' | translate">
+      <ion-icon slot="start" name="people-outline" color="primary"></ion-icon>
+      <ion-label>
+        <h2>{{ 'invite.contacts.title' | translate }}</h2>
+        <p>{{ 'invite.contacts.subtitle' | translate }}</p>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+
+  <!-- Suggested contacts -->
+  <ion-list lines="inset">
+    <ion-list-header>{{ 'invite.contacts.header' | translate }}</ion-list-header>
+
+    <!-- your generated unmatched contacts will render here -->
+    <!-- example item (keep commented until dynamic) -->
+    <!--
+    <ion-item>
+      <ion-avatar slot="start">
+        <ion-img src="https://via.placeholder.com/40"></ion-img>
+      </ion-avatar>
+      <ion-label>
+        <h2>+91 140 087 0039</h2>
+        <p>{{ 'invite.contacts.notOnApp' | translate }}</p>
+      </ion-label>
+      <ion-button slot="end" fill="outline" color="success"
+                  (click)="invite('+911400870039')">
+        {{ 'invite.actions.invite' | translate }}
+      </ion-button>
+    </ion-item>
+    -->
+  </ion-list>
+</ion-content>

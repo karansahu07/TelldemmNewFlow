@@ -1,0 +1,59 @@
+<ion-header [translucent]="true">
+  <ion-toolbar class="tooler">
+    <ion-title slot="start" class="ion-text-start">
+      {{ 'community.title' | translate }}
+    </ion-title>
+
+    <ion-buttons slot="end">
+      <ion-button fill="clear" [attr.aria-label]="'community.actions.qr' | translate">
+        <ion-img src="assets/images/qr-code.svg" class="toolbar-icon"></ion-img>
+      </ion-button>
+      <ion-button fill="clear" (click)="presentPopover($event)" [attr.aria-label]="'community.actions.menu' | translate">
+        <ion-img src="assets/images/dots (1).svg" class="toolbar-icon"></ion-img>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true">
+  <ion-item lines="none" class="new-community" button (click)="createCommunityPrompt()"
+            [attr.aria-label]="'community.newCommunity' | translate">
+    <ion-avatar slot="start">
+      <img src="assets/images/profile.png" />
+      <ion-icon name="add-circle" class="add-icon"></ion-icon>
+    </ion-avatar>
+    <ion-label>
+      <h2>{{ 'community.newCommunity' | translate }}</h2>
+    </ion-label>
+  </ion-item>
+
+  <ng-container *ngFor="let community of joinedCommunities">
+    <ion-item class="community-item">
+      <ion-avatar slot="start">
+        <img [src]="community.icon" />
+      </ion-avatar>
+      <ion-label>
+        <h2>{{ community.name }}</h2>
+      </ion-label>
+    </ion-item>
+
+    <ion-list lines="none" class="group-list">
+      <ion-item *ngFor="let group of community.groups" button (click)="goToGroupChat(group.id)">
+        <ion-icon slot="start"
+                  [name]="group.type === 'announcement' ? 'megaphone-outline' : 'chatbox-outline'">
+        </ion-icon>
+        <ion-label>
+          <h3>{{ group.name }}</h3>
+          <p>{{ ('community.groupType.' + (group.type || 'normal')) | translate }}</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+
+    <ion-item lines="none" button detail="false" (click)="goToAddGroupCommunity(community)"
+              [attr.aria-label]="'community.viewAll' | translate">
+      <ion-label color="primary">{{ 'community.viewAll' | translate }}</ion-label>
+    </ion-item>
+  </ng-container>
+</ion-content>
+
+<app-footer-tabs></app-footer-tabs>

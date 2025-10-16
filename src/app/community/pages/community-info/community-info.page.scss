@@ -1,0 +1,150 @@
+/* =========================
+   Community (Theme-Token Only)
+   ========================= */
+
+.red-header {
+  --background: var(--ion-background-color);
+  --ion-toolbar-background: var(--ion-toolbar-background);
+  --ion-color-primary: var(--ion-color-primary);
+}
+
+/* Top section */
+.community-top {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px 8px;
+  background: var(--ion-toolbar-background);
+  border-bottom: 1px solid var(--ion-border-color);
+
+  .community-avatar {
+    width: 84px; height: 84px; border-radius: 16px; overflow: hidden;
+    background: color-mix(in srgb, var(--ion-text-color) 6%, var(--ion-item-background));
+    display: flex; align-items: center; justify-content: center;
+    border: 1px solid var(--ion-border-color);
+    img { width: 56px; height: 56px; display: block; object-fit: cover; }
+  }
+
+  .community-meta { flex: 1; }
+  .community-name { margin: 0; font-size: 20px; font-weight: 700; color: var(--ion-text-color); }
+  .community-sub  { margin: 2px 0 0; font-size: 13px; color: color-mix(in srgb, var(--ion-text-color) 60%, transparent); }
+}
+
+/* Actions */
+.action-row {
+  display: flex; justify-content: space-around; gap: 8px;
+  padding: 10px 16px 16px;
+  background: var(--ion-item-background);
+  border-bottom: 1px solid var(--ion-border-color);
+
+  .action-btn {
+    --padding-start: 8px; --padding-end: 8px;
+    --padding-top: 8px; --padding-bottom: 8px;
+    --background: transparent;
+    flex-direction: column; align-items: center; min-width: 86px; border-radius: 12px;
+
+    ion-icon {
+      font-size: 22px;
+      color: var(--ion-color-primary);
+      margin-bottom: 4px;
+    }
+    .label {
+      font-size: 13px;
+      color: var(--ion-color-primary);
+      font-weight: 600;
+    }
+
+    &:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+    &:hover { background: color-mix(in srgb, var(--ion-color-primary) 8%, transparent); }
+  }
+}
+
+/* Tabs */
+.tabs-toolbar {
+  --background: var(--ion-item-background);
+  background: var(--background);
+  padding: 6px 12px;
+  border-top: 1px solid var(--ion-border-color);
+  border-bottom: 1px solid var(--ion-border-color);
+}
+ion-segment {
+  --indicator-color: var(--ion-color-primary);
+  --indicator-box-shadow: 0 6px 14px color-mix(in srgb, var(--ion-color-primary) 25%, transparent);
+}
+
+/* Content */
+.red-theme-content { --background: var(--ion-background-color); background: var(--background); }
+.section { padding-bottom: 12px; }
+
+/* Description card */
+.comm-desc {
+  margin: 12px; border-radius: 12px;
+  --background: color-mix(in srgb, var(--ion-text-color) 4%, var(--ion-card-background));
+  background: var(--background);
+  color: var(--ion-text-color);
+  border: 1px solid var(--ion-border-color);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--ion-text-color) 6%, transparent);
+}
+
+/* List items */
+ion-list ion-item { --min-height: 56px; }
+
+/* Muted text */
+.muted { color: color-mix(in srgb, var(--ion-text-color) 60%, transparent); font-size: 13px; }
+
+/* Initial avatar */
+.initial-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center; font-weight: 700;
+  color: var(--ion-color-primary-contrast);
+  background: linear-gradient(
+    135deg,
+    color-mix(in srgb, var(--ion-color-primary) 18%, var(--ion-card-background)) 0%,
+    color-mix(in srgb, var(--ion-color-primary) 28%, var(--ion-card-background)) 100%
+  );
+  border: 1px solid var(--ion-border-color);
+}
+
+/* Add avatar */
+.green-avatar {
+  --background: var(--ion-color-primary);
+  background: var(--background);
+  color: var(--ion-color-primary-contrast);
+  width: 44px; height: 44px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--background) 25%, transparent);
+}
+
+/* Danger */
+.item .danger, ion-item .danger {
+  color: var(--ion-color-danger);
+  font-weight: 600;
+}
+
+/* No shadows */
+ion-footer, ion-toolbar { box-shadow: none !important; }
+
+/* Icon SVG */
+.community-icon {
+  width: 44px; height: 44px;
+  svg { width: 100%; height: 100%; display: block; }
+  --comm-bg: var(--ion-card-background);
+  --comm-fg: color-mix(in srgb, var(--ion-text-color) 70%, transparent);
+  .bg { fill: var(--comm-bg); }
+  .fg { fill: var(--comm-fg); }
+}
+:root[mode=ios] .community-icon {
+  --comm-bg: color-mix(in srgb, var(--ion-color-primary) 16%, var(--ion-card-background));
+}
+@media (prefers-color-scheme: dark) {
+  .community-icon { --comm-fg: color-mix(in srgb, var(--ion-text-color) 85%, transparent); }
+}
+
+/* Helpers */
+.bottom-space { height: 120px; }
+.scroll-padding { height: 6px; }
+
+/* Focus ring */
+:where(.action-btn, .community-avatar, .initial-avatar, .green-avatar):focus-visible {
+  outline: none; box-shadow: var(--focus-ring); border-radius: 12px;
+}

@@ -1,0 +1,100 @@
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/"></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>{{ 'add_existing_groups_page.header' | translate }}</ion-title>
+
+    <ion-buttons slot="end">
+      <ion-button fill="clear" [attr.aria-label]="'add_existing_groups_page.actions.search' | translate">
+        <ion-icon name="search-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+
+  <ion-toolbar>
+    <div class="sub-title" style="padding:8px 16px; font-size:14px; color:#666;">
+      {{ selectedCount }} {{ 'add_existing_groups_page.of' | translate }} {{ totalGroups }} {{ 'add_existing_groups_page.selected' | translate }}
+    </div>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div style="padding: 12px 16px; color:#666; text-align:center;">
+    {{ 'add_existing_groups_page.banner' | translate }}
+  </div>
+
+  <!-- Selected chips row (only visible when at least one selected) -->
+  <div *ngIf="selectedCount > 0" style="padding:8px 12px; display:flex; gap:8px; align-items:center; overflow:auto; white-space:nowrap;">
+    <ng-container *ngFor="let s of selectedGroups">
+      <div style="position:relative; display:inline-block; width:56px; text-align:center;">
+        <ion-avatar style="width:48px; height:48px; border-radius:24px; overflow:hidden;">
+          <img [src]="s.dp || 'assets/images/user.jfif'" />
+        </ion-avatar>
+
+        <!-- NOTE: changed to a plain button with aria-label; (ion-button) is not valid here -->
+        <button
+          type="button"
+          (click)="toggleSelect(s)"
+          [attr.aria-label]="'add_existing_groups_page.actions.removeChip' | translate"
+          style="position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:11px; background:#fff; border:1px solid #eee;"
+        >
+          <ion-icon name="close-outline" style="font-size:14px; color:#666;"></ion-icon>
+        </button>
+      </div>
+    </ng-container>
+  </div>
+
+  <ion-list>
+    <ion-list-header>
+      {{ 'add_existing_groups_page.listHeader' | translate }}
+    </ion-list-header>
+
+    <ion-item *ngIf="loading">
+      <ion-label>{{ 'add_existing_groups_page.loading' | translate }}</ion-label>
+    </ion-item>
+
+    <ion-item *ngIf="!loading && groups.length === 0">
+      <ion-label>{{ 'add_existing_groups_page.empty' | translate }}</ion-label>
+    </ion-item>
+
+    <!-- NOTE: groups array is kept ordered with selected ones first -->
+    <ion-item *ngFor="let g of groups" lines="none" (click)="toggleSelect(g)">
+      <ion-checkbox
+        slot="start"
+        [(ngModel)]="g.selected"
+        (ionChange)="onSelectChange()"
+        (click)="$event.stopPropagation()"
+        [attr.aria-label]="'add_existing_groups_page.checkboxLabel' | translate"
+      >
+      </ion-checkbox>
+
+      <ion-avatar slot="start" style="margin-right:8px;">
+        <img [src]="g.dp || 'assets/images/user.jfif'" />
+      </ion-avatar>
+
+      <ion-label>
+        <h2 style="margin:0;">{{ g.name }}</h2>
+        <p style="margin:0; color:#666; font-size:13px;">
+          {{ g.membersPreview }}
+        </p>
+      </ion-label>
+
+      <!-- show green check for selected -->
+      <ion-icon *ngIf="g.selected" name="checkmark-circle" color="success" slot="end" aria-hidden="true"></ion-icon>
+    </ion-item>
+  </ion-list>
+
+  <!-- Floating forward button -->
+  <ion-fab vertical="bottom" horizontal="end" slot="fixed">
+    <ion-fab-button
+      color="success"
+      (click)="confirmSelection()"
+      [disabled]="selectedCount===0"
+      [attr.aria-label]="'add_existing_groups_page.actions.confirm' | translate"
+    >
+      <ion-icon name="arrow-forward-outline"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

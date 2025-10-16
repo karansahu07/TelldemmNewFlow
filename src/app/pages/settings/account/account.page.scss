@@ -1,0 +1,26 @@
+page-account {
+  /* List surface */
+  ion-list {
+    background: var(--ion-background-color);
+    --ion-item-background: var(--ion-item-background, var(--ion-background-color));
+    --ion-item-color: var(--ion-text-color);
+  }
+
+  /* Destructive action item */
+  .delete-account {
+    --color: var(--ion-color-danger, #b71c1c);
+    font-weight: 600;
+  }
+
+  /* Optional: subtle hover/focus for delete */
+  .delete-account:focus-visible {
+    outline: none;
+    box-shadow: var(--focus-ring);
+    border-radius: 6px;
+  }
+
+  /* Compact adjust for very small screens */
+  @media (max-width: 380px) {
+    ion-list { font-size: 14px; }
+  }
+}

@@ -1,0 +1,92 @@
+<ion-header class="red-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/add-group-community"></ion-back-button>
+    </ion-buttons>
+    <ion-title>New group</ion-title>
+  </ion-toolbar>
+
+  <div class="community-line">
+    <p class="community-name">{{ communityName || 'Community' }}</p>
+  </div>
+</ion-header>
+
+<ion-content class="red-theme-content">
+
+  <div class="form-top">
+    <div class="avatar-wrapper">
+      <ion-avatar>
+        <img src="assets/images/group.jpg" />
+      </ion-avatar>
+      <ion-button fill="clear" (click)="0"> 
+        <ion-icon name="camera-outline"></ion-icon>
+      </ion-button>
+    </div>
+
+    <ion-item lines="none">
+      <ion-input
+        placeholder="Enter group name"
+        [(ngModel)]="groupName"
+      ></ion-input>
+    </ion-item>
+
+    <ion-item lines="none">
+      <ion-textarea
+        placeholder="Group description (optional)"
+        [(ngModel)]="groupDescription"
+        autoGrow="true"
+      ></ion-textarea>
+    </ion-item>
+  </div>
+
+  <ion-list>
+    <ion-item button (click)="visibility = visibility === 'Visible' ? 'Hidden' : 'Visible'">
+      <ion-label>
+        <h3>Group visibility</h3>
+        <p class="muted">{{ visibility }}</p>
+      </ion-label>
+      <ion-icon slot="end" name="eye-outline"></ion-icon>
+    </ion-item>
+
+    <ion-item button>
+      <ion-label>
+        <h3>Group permissions</h3>
+        <p class="muted">{{ permissions }}</p>
+      </ion-label>
+      <ion-icon slot="end" name="settings-outline"></ion-icon>
+    </ion-item>
+
+    <ion-list-header>
+      <ion-label>Members: {{ members.length > 0 ? members.length : 'None' }}</ion-label>
+    </ion-list-header>
+
+    <ion-item *ngFor="let m of members; let i = index">
+      <ion-avatar slot="start">
+        <img src="assets/images/user.jfif" />
+      </ion-avatar>
+      <ion-label>
+        <h3>{{ m.username || m.userId }}</h3>
+        <p class="muted">{{ m.phoneNumber || '' }}</p>
+      </ion-label>
+      <ion-button fill="clear" slot="end" (click)="removeMember(i)">
+        <ion-icon name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+
+    <ion-item lines="none" button (click)="addMemberPrompt()">
+      <ion-avatar slot="start" class="add-avatar">
+        <ion-icon name="person-add-outline"></ion-icon>
+      </ion-avatar>
+      <ion-label>
+        <h3>Add</h3>
+      </ion-label>
+    </ion-item>
+  </ion-list>
+</ion-content>
+
+
+<ion-fab vertical="bottom" horizontal="end" slot="fixed">
+  <ion-fab-button color="success" (click)="createGroupAndLink()" [disabled]="creating">
+    <ion-icon name="checkmark-outline"></ion-icon>
+  </ion-fab-button>
+</ion-fab>

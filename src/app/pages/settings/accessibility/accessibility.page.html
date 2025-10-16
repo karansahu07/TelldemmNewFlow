@@ -1,0 +1,104 @@
+<ion-header>
+  <ion-toolbar style="--background: #ffffff; --color: #000000;">
+    <ion-buttons slot="start">
+      <ion-back-button
+        defaultHref="/settings"
+        [attr.aria-label]="'common.back' | translate">
+      </ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'accessibility.title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding" style="--background: #ffffff;">
+  <!-- Display & Motion Group -->
+  <ion-list lines="inset">
+    <ion-list-header>
+      <ion-label>{{ 'accessibility.groups.displayMotion' | translate }}</ion-label>
+    </ion-list-header>
+
+    <!-- Increase Contrast -->
+    <ion-item>
+      <ion-icon slot="start" name="contrast-outline" aria-hidden="true"></ion-icon>
+      <ion-label>
+        <h2>{{ 'accessibility.increaseContrast.title' | translate }}</h2>
+        <p>{{ 'accessibility.increaseContrast.desc' | translate }}</p>
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [(ngModel)]="increaseContrast"
+        (ionChange)="onToggle('increaseContrast', $event)"
+        [attr.aria-label]="'accessibility.increaseContrast.title' | translate">
+      </ion-toggle>
+    </ion-item>
+
+    <!-- Reduce Motion -->
+    <!-- <ion-item>
+      <ion-icon slot="start" name="play-back-outline" aria-hidden="true"></ion-icon>
+      <ion-label>
+        <h2>{{ 'accessibility.reduceMotion.title' | translate }}</h2>
+        <p>{{ 'accessibility.reduceMotion.desc' | translate }}</p>
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [(ngModel)]="reduceMotion"
+        (ionChange)="onToggle('reduceMotion', $event)"
+        [attr.aria-label]="'accessibility.reduceMotion.title' | translate">
+      </ion-toggle>
+    </ion-item> -->
+
+    <!-- Large Text -->
+    <ion-item>
+      <ion-icon slot="start" name="text-outline" aria-hidden="true"></ion-icon>
+      <ion-label>
+        <h2>{{ 'accessibility.largeText.title' | translate }}</h2>
+        <p>{{ 'accessibility.largeText.desc' | translate }}</p>
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [(ngModel)]="largeText"
+        (ionChange)="onToggle('largeText', $event)"
+        [attr.aria-label]="'accessibility.largeText.title' | translate">
+      </ion-toggle>
+    </ion-item>
+
+    <!-- Grayscale -->
+    <ion-item>
+      <ion-icon slot="start" name="color-filter-outline" aria-hidden="true"></ion-icon>
+      <ion-label>
+        <h2>{{ 'accessibility.grayscale.title' | translate }}</h2>
+        <p>{{ 'accessibility.grayscale.desc' | translate }}</p>
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [(ngModel)]="grayscale"
+        (ionChange)="onToggle('grayscale', $event)"
+        [attr.aria-label]="'accessibility.grayscale.title' | translate">
+      </ion-toggle>
+    </ion-item>
+  </ion-list>
+
+  <!-- will add limit aninmation so that person able to rmeove delete animation as it is power consuming -->
+
+  <!-- Interaction Group -->
+  <!-- <ion-list lines="inset">
+    <ion-list-header>
+      <ion-label>{{ 'accessibility.groups.interaction' | translate }}</ion-label>
+    </ion-list-header> -->
+
+    <!-- Simple Animations -->
+    <!-- <ion-item>
+      <ion-icon slot="start" name="hand-left-outline" aria-hidden="true"></ion-icon>
+      <ion-label>
+        <h2>{{ 'accessibility.simpleAnimations.title' | translate }}</h2>
+        <p>{{ 'accessibility.simpleAnimations.desc' | translate }}</p>
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [(ngModel)]="simpleAnimations"
+        (ionChange)="onToggle('simpleAnimations', $event)"
+        [attr.aria-label]="'accessibility.simpleAnimations.title' | translate">
+      </ion-toggle>
+    </ion-item> -->
+  <!-- </ion-list> -->
+</ion-content>

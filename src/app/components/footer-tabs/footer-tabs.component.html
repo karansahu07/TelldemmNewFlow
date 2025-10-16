@@ -1,0 +1,92 @@
+<!-- <ion-tab-bar slot="bottom">
+  <button (click)="navigateTohomescreen()" [class.active]="isActive(['/home-screen'])">
+    <div class="icon-bg" [class.active]="isActive(['/home-screen'])">
+      <img src="assets/images/whatsapp-new-chat.svg" class="footericons" alt="Chat" />
+      <ion-badge *ngIf="totalUnreadCount > 0" class="unread-badge">{{ totalUnreadCount }}</ion-badge>
+    </div>
+    <p class="tabtext">Chat</p>
+  </button>
+
+  <button (click)="navigateTocallingscreen()" [class.active]="isActive(['/status-screen'])">
+    <div class="icon-bg" [class.active]="isActive(['/status-screen'])">
+      <img src="assets/images/icon2.svg" class="footericons" alt="Updates" />
+      <ion-badge *ngIf="totalUnreadUpdates > 0" class="unread-badge">{{ totalUnreadUpdates }}</ion-badge>
+    </div>
+    <p class="tabtext">Updates</p>
+  </button>
+
+  <button (click)="navigateTocommunityscreen()" [class.active]="isActive(['/community-screen'])">
+    <div class="icon-bg" [class.active]="isActive(['/community-screen'])">
+      <img src="assets/images/contact.svg" class="footericons" alt="community" />
+    </div>
+    <p class="tabtext">Communities</p>
+  </button>
+
+  <button (click)="navigateTocallsscreen()" [class.active]="isActive(['/calls-screen'])">
+    <div class="icon-bg" [class.active]="isActive(['/calls-screen'])">
+      <img src="assets/images/call.svg" class="footericons" alt="Calls" />
+    </div>
+    <p class="tabtext">Calls</p>
+  </button>
+</ion-tab-bar> -->
+
+
+<ion-tab-bar slot="bottom" class="mineclass">
+  <!-- Chat -->
+  <button
+    (click)="navigateTohomescreen()"
+    [class.active]="isActive(['/home-screen'])"
+    [attr.aria-label]="'footerTabs.chat' | translate">
+    <div class="icon-bg" [class.active]="isActive(['/home-screen'])">
+      <img src="assets/images/whatsapp-new-chat.svg" class="footericons" [alt]="'footerTabs.chat' | translate" />
+      <ion-badge
+        *ngIf="totalUnreadCount > 0"
+        class="unread-badge"
+        [attr.aria-label]="'footerTabs.badges.unreadChats' | translate:{ count: totalUnreadCount }"
+        aria-live="polite">
+        {{ totalUnreadCount }}
+      </ion-badge>
+    </div>
+    <p class="tabtext">{{ 'footerTabs.chat' | translate }}</p>
+  </button>
+
+  <!-- Updates / Status -->
+  <button
+    (click)="navigateTocallingscreen()"
+    [class.active]="isActive(['/status-screen'])"
+    [attr.aria-label]="'footerTabs.updates' | translate">
+    <div class="icon-bg" [class.active]="isActive(['/status-screen'])">
+      <img src="assets/images/icon2.svg" class="footericons" [alt]="'footerTabs.updates' | translate" />
+      <ion-badge
+        *ngIf="totalUnreadUpdates > 0"
+        class="unread-badge"
+        [attr.aria-label]="'footerTabs.badges.unreadUpdates' | translate:{ count: totalUnreadUpdates }"
+        aria-live="polite">
+        {{ totalUnreadUpdates }}
+      </ion-badge>
+    </div>
+    <p class="tabtext">{{ 'footerTabs.updates' | translate }}</p>
+  </button>
+
+  <!-- Communities -->
+  <button
+    (click)="navigateTocommunityscreen()"
+    [class.active]="isActive(['/community-screen'])"
+    [attr.aria-label]="'footerTabs.communities' | translate">
+    <div class="icon-bg" [class.active]="isActive(['/community-screen'])">
+      <img src="assets/images/contact.svg" class="footericons" [alt]="'footerTabs.communities' | translate" />
+    </div>
+    <p class="tabtext">{{ 'footerTabs.communities' | translate }}</p>
+  </button>
+
+  <!-- Calls -->
+  <button
+    (click)="navigateTocallsscreen()"
+    [class.active]="isActive(['/mine'])"
+    [attr.aria-label]="'footerTabs.calls' | translate">
+    <div class="icon-bg" [class.active]="isActive(['/mine'])">
+      <img src="assets/images/call.svg" class="footericons" [alt]="'footerTabs.calls' | translate" />
+    </div>
+    <p class="tabtext">{{ 'footerTabs.calls' | translate }}</p>
+  </button>
+</ion-tab-bar>

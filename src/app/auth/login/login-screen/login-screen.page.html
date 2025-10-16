@@ -1,0 +1,106 @@
+<div [ngClass]="{ 'blurred': showOtpPopup }" class="Lorem-main">
+  <ion-header [translucent]="true" class="background" style="padding-top: 30px;">
+    <ion-toolbar>
+      <ion-title>Enter Your Mobile Number</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-content [fullscreen]="true">
+    <div class="Lorem-main">
+      <div style="margin-top: 30px;">
+
+        <div class="Lorem">
+          <p>TellDemm will need to verify your account. What's my number?</p>
+        </div>
+
+        <div class="main-dropdown">
+          <select class="drop-down" (change)="onCountryChange($event)">
+            <option *ngFor="let c of countries" [value]="c.name">
+              ({{ c.code }}) {{ c.name }} 
+            </option>
+          </select>
+          <div class="underline-text"></div>
+        </div>
+
+        <div class="main-country">
+          <div class="country-code">
+            <p class="count-code">{{ countryCode }}</p>
+            <p class="underline-country"></p>
+          </div>
+
+          <div class="phone-wrapper">
+            <input type="tel" maxlength="10" placeholder="Enter mobile number" [(ngModel)]="phoneNumber" name="phone"
+              style="text-align: left;" pattern="[0-9]*" inputmode="numeric" (keypress)="allowOnlyNumbers($event)" />
+            <p class="underline-country"></p>
+          </div>
+        </div>
+
+        <p *ngIf="phoneNumber && !isPhoneValid()" class="required-line">
+          Please enter a valid 10-digit mobile number.
+        </p>
+
+      </div>
+
+      <div class="agree-div">
+        <button [disabled]="!isPhoneValid() || isSendingOtp" (click)="onAgreeClick()">
+          <ng-container *ngIf="!isSendingOtp">Agree & Continue</ng-container>
+          <ion-spinner *ngIf="isSendingOtp" name="crescent" color="light"></ion-spinner>
+        </button>
+      </div>
+
+    </div>
+  </ion-content>
+
+  <ion-modal [isOpen]="showConfirmPopup" class="confirm-popup">
+    <ng-template>
+      <div class="popup-container">
+        <p class="popup-message">Is this your mobile number?</p>
+        <h2 class="popup-number">{{ countryCode + phoneNumber }}</h2>
+
+        <div class="popup-buttons">
+          <button class="popup-btn edit" (click)="onEdit()">Edit</button>
+          <button class="popup-btn ok" (click)="onConfirm()">OK</button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+</div>
+
+<!-- Updated OTP modal with Ionic Input OTP -->
+<div *ngIf="showOtpPopup" class="otp-popup-wrapper">
+  <div class="backgrounds">
+    <div class="opt">
+      <p>Enter Your OTP</p>
+    </div>
+
+    <div class="border-line"></div>
+
+    <div class="otp-input-wrapper">
+      <ion-input-otp 
+        #otpInput
+        length="6"
+        [value]="otpValue"
+        (ionInput)="onOtpChange($event)"
+        class="custom-otp-input">
+      </ion-input-otp>
+    </div>
+
+    <div class="submit" style="margin-bottom: 10px;">
+      <button [disabled]="!isOtpComplete() || isVerifyingOtp" (click)="goToHome()">
+        <ng-container *ngIf="!isVerifyingOtp">Submit</ng-container>
+        <ion-spinner *ngIf="isVerifyingOtp" name="crescent"></ion-spinner>
+      </button>
+    </div>
+
+    <div class="resend-section">
+      <p>Didn't receive code?</p>
+      <p>
+        <span [style.color]="timer === 0 ? '#6e1911' : '#888'" (click)="resendOtp()"
+          [style.pointerEvents]="timer === 0 ? 'auto' : 'none'">
+          Resend
+        </span> - {{ getFormattedTime() }}
+      </p>
+    </div>
+
+  </div>
+</div>

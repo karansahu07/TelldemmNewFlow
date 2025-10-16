@@ -1,0 +1,190 @@
+<ion-header class="red-header">
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button (click)="back()"></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>
+      <div class="header-title">Community</div>
+    </ion-title>
+  </ion-toolbar>
+
+  <!-- large community top area -->
+  <div class="community-top">
+    <ion-avatar class="community-avatar">
+      <img [src]="community.icon || 'assets/images/multiple-users-silhouette (1).png'" />
+    </ion-avatar>
+
+    <div class="community-meta">
+      <h1 class="community-name">{{ community.name || 'Community' }}</h1>
+      <p class="community-sub">Community · {{ groupCount }} groups</p>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <ion-button fill="clear" class="action-btn" (click)="invite()">
+      <ion-icon name="link-outline"></ion-icon>
+      <div class="label">Invite</div>
+    </ion-button>
+
+    <ion-button fill="clear" class="action-btn" (click)="addMembers()">
+      <ion-icon name="person-add-outline"></ion-icon>
+      <div class="label">Add members</div>
+    </ion-button>
+
+    <ion-button fill="clear" class="action-btn" (click)="addGroups()">
+      <ion-icon name="people-outline"></ion-icon>
+      <div class="label">Add groups</div>
+    </ion-button>
+  </div>
+
+  <!-- segment for tabs -->
+  <ion-toolbar class="tabs-toolbar">
+    <ion-segment value="community" (ionChange)="onSegmentChanged($event)" [(ngModel)]="segment">
+      <ion-segment-button value="community">
+        <ion-label>Community</ion-label>
+      </ion-segment-button>
+      <ion-segment-button value="announcements">
+        <ion-label>Announcements</ion-label>
+      </ion-segment-button>
+    </ion-segment>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="red-theme-content">
+  <div class="scroll-padding"></div>
+
+  <!-- community section -->
+  <section id="section-community" class="section">
+    <!-- description / community text -->
+    <ion-card class="comm-desc">
+      <ion-card-content>
+        {{ community.description }}
+      </ion-card-content>
+    </ion-card>
+
+    <!-- options list -->
+    <ion-list>
+      <ion-item button (click)="editCommunity()">
+        <ion-icon slot="start" name="pencil-outline"></ion-icon>
+        <ion-label>Edit community info</ion-label>
+      </ion-item>
+
+      <ion-item button (click)="manageGroups()">
+        <ion-icon slot="start" name="people-outline"></ion-icon>
+        <ion-label>Manage groups</ion-label>
+      </ion-item>
+
+      <ion-item button (click)="communitySettings()">
+        <ion-icon slot="start" name="settings-outline"></ion-icon>
+        <ion-label>Community settings</ion-label>
+      </ion-item>
+
+      <ion-item button (click)="viewGroups()">
+        <ion-icon slot="start" name="people-circle-outline"></ion-icon>
+        <ion-label>View groups ({{ groupCount }})</ion-label>
+      </ion-item>
+    </ion-list>
+
+    <ion-list>
+      <ion-list-header>
+        <ion-label>Community members ({{ memberCount }})</ion-label>
+      </ion-list-header>
+
+      <ion-item button (click)="addMembers()">
+        <ion-avatar slot="start" class="green-avatar">
+          <ion-icon name="person-add-outline"></ion-icon>
+        </ion-avatar>
+        <ion-label>Add members</ion-label>
+      </ion-item>
+
+      <!-- mock members - replace with your members loop -->
+      <ion-item>
+        <ion-avatar slot="start">
+          <img src="assets/images/user.jfif" />
+        </ion-avatar>
+        <ion-label>
+          <h3>You</h3>
+          <p class="muted">Community Owner</p>
+        </ion-label>
+      </ion-item>
+
+      <!-- <ion-item>
+        <ion-avatar slot="start" class="initial-avatar">KM</ion-avatar>
+        <ion-label>
+          <h3>Khushi MCA</h3>
+          <p class="muted">Change is the end result of all true learning</p>
+        </ion-label>
+      </ion-item> -->
+    </ion-list>
+
+    <ion-list>
+      <ion-item button (click)="assignNewOwner()">
+        <ion-icon slot="start" name="people-outline"></ion-icon>
+        <ion-label>Assign new owner</ion-label>
+      </ion-item>
+
+      <ion-item button (click)="exitCommunity()">
+        <ion-icon slot="start" name="log-out-outline" color="danger"></ion-icon>
+        <ion-label class="danger">Exit community</ion-label>
+      </ion-item>
+
+      <ion-item button (click)="reportCommunity()">
+        <ion-icon slot="start" name="warning-outline" color="danger"></ion-icon>
+        <ion-label class="danger">Report community</ion-label>
+      </ion-item>
+
+      <ion-item button (click)="deactivateCommunity()">
+        <ion-icon slot="start" name="close-circle-outline" color="danger"></ion-icon>
+        <ion-label class="danger">Deactivate community</ion-label>
+      </ion-item>
+    </ion-list>
+  </section>
+
+  <!-- announcements section -->
+  <section id="section-announcements" class="section">
+    <ion-list>
+      <ion-item>
+        <ion-icon slot="start" name="notifications-outline"></ion-icon>
+        <ion-label>
+          <h3>Notifications</h3>
+          <p class="muted">Manage announcement notifications</p>
+        </ion-label>
+      </ion-item>
+
+      <ion-item (click)="mediaVisibility()" button>
+        <ion-icon slot="start" name="images-outline"></ion-icon>
+        <ion-label>
+          <h3>Media visibility</h3>
+          <p class="muted">Show media from announcements in gallery</p>
+        </ion-label>
+      </ion-item>
+
+      <ion-item (click)="disappearingMessages()" button>
+        <ion-icon slot="start" name="timer-outline"></ion-icon>
+        <ion-label>
+          <h3>Disappearing messages</h3>
+          <p class="muted">Off</p>
+        </ion-label>
+      </ion-item>
+
+      <ion-item (click)="chatLock()" button>
+        <ion-icon slot="start" name="lock-closed-outline"></ion-icon>
+        <ion-label>
+          <h3>Chat lock</h3>
+          <p class="muted">Lock announcements on this device</p>
+        </ion-label>
+      </ion-item>
+
+      <ion-item (click)="phoneNumberPrivacy()" button>
+        <ion-icon slot="start" name="phone-portrait-outline"></ion-icon>
+        <ion-label>
+          <h3>Phone number privacy</h3>
+          <p class="muted">Your phone number is visible in this chat</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  </section>
+
+  <div class="bottom-space"></div>
+</ion-content>

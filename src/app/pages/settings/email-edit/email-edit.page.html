@@ -1,0 +1,78 @@
+<ion-header>
+  <ion-toolbar class="toolbar-light">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/settings"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'emailEdit.title' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="page-content">
+  <div class="container">
+    <div class="card center-card">
+      <div class="icon-section">
+        <ion-icon name="mail" class="email-icon"></ion-icon>
+      </div>
+
+      <p class="muted center-text">
+        {{ 'emailEdit.description' | translate }}
+      </p>
+
+      <!-- View Mode -->
+      <div class="email-info" *ngIf="!isEditing">
+        <label>{{ 'emailEdit.label' | translate }}</label>
+        <div class="email-row">
+          <strong>{{ emailForm.value.email }}</strong>
+
+          <ion-button
+            fill="clear"
+            size="small"
+            (click)="editEmail()"
+            [attr.aria-label]="'emailEdit.edit' | translate">
+            <ion-icon slot="icon-only" name="pencil-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="verified">
+          <ion-icon name="checkmark-circle" class="verified-icon"></ion-icon>
+          <span>{{ 'emailEdit.verified' | translate }}</span>
+        </div>
+      </div>
+
+      <!-- Edit Mode -->
+      <form *ngIf="isEditing" [formGroup]="emailForm" (ngSubmit)="saveEmail()" class="edit-form">
+        <ion-item lines="full">
+          <ion-input
+            type="email"
+            formControlName="email"
+            [placeholder]="'emailEdit.placeholder' | translate"
+            [attr.aria-label]="'emailEdit.label' | translate">
+          </ion-input>
+        </ion-item>
+
+        <!-- validation -->
+        <div class="validation" aria-live="polite" *ngIf="(emailControl.invalid && (emailControl.dirty || emailControl.touched))">
+          <small class="error" *ngIf="emailControl.hasError('required')">
+            {{ 'emailEdit.validation.required' | translate }}
+          </small>
+          <small class="error" *ngIf="emailControl.hasError('email')">
+            {{ 'emailEdit.validation.invalid' | translate }}
+          </small>
+          <small class="error" *ngIf="emailControl.hasError('maxlength')">
+            {{ 'emailEdit.validation.maxlength' | translate }}
+          </small>
+        </div>
+
+        <div class="actions">
+          <ion-button fill="outline" expand="block" (click)="cancelEdit()" [attr.aria-label]="'emailEdit.cancel' | translate">
+            {{ 'emailEdit.cancel' | translate }}
+          </ion-button>
+
+          <ion-button type="submit" color="primary" expand="block" [disabled]="emailForm.invalid" [attr.aria-label]="'emailEdit.save' | translate">
+            {{ 'emailEdit.save' | translate }}
+          </ion-button>
+        </div>
+      </form>
+    </div>
+  </div>
+</ion-content>
