@@ -445,7 +445,8 @@ export class ContactsPage implements OnInit {
 
     // prepare memberIds for backend (prefer numeric IDs, otherwise string fallback)
     const memberIds = membersForFirebase.map((m) => {
-      const id = m.user_id;
+      const id = m.userId;
+      // console.log({id})
       const n = typeof id === 'number' ? id : Number(id);
       return Number.isFinite(n) ? n : id;
     });
@@ -462,6 +463,7 @@ export class ContactsPage implements OnInit {
 
       // 2) Send to backend (pass memberIds so backend knows members)
       // Note: using your existing api.createGroup signature; adapt if signature differs
+
       this.api
         .createGroup(
           this.newGroupName,

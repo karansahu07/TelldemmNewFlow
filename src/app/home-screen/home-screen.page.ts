@@ -939,7 +939,7 @@ export class HomeScreenPage implements OnInit, OnDestroy {
 
   // returns only the currently visible chats that are NOT communities
   private get visibleNonCommunityChats(): any[] {
-    return this.filteredChats.filter((c) => !c.isCommunity);
+    return this.filteredChats.filter((c) => c.type !== 'community');
   }
 
   // are all visible non-community chats currently selected?
@@ -948,6 +948,7 @@ export class HomeScreenPage implements OnInit, OnDestroy {
     if (visible.length === 0) return false;
     // compare by receiver_Id + group flag (community already excluded)
     const key = (c: any) => `${c.receiver_Id}::${!!c.group}`;
+    // console.log({key});
     const selectedKeys = new Set(this.selectedChats.map(key));
     return visible.every((c) => selectedKeys.has(key(c)));
   }
@@ -1403,7 +1404,9 @@ export class HomeScreenPage implements OnInit, OnDestroy {
   }
 
   get filteredChats() {
+    // console.log("visible.length",this.chatList)
     let filtered = this.chatList;
+    // console.log({filtered})
 
     if (this.selectedFilter === 'read') {
       filtered = filtered.filter((chat) => !chat.unread && !chat.group);
