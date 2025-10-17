@@ -20,6 +20,7 @@ import { Language } from './services/language';
 import { LangChangeEvent, TranslateService } from '@ngx-translate/core';
 
 import { EdgeToEdge } from '@capawesome/capacitor-android-edge-to-edge-support';
+import { ThemeService } from './services/theme';
 // import { LocalDb } from './services/local-db';
 
 const STORAGE_KEY = 'settings.accessibility';
@@ -65,7 +66,9 @@ export class AppComponent implements OnInit {
     private langSvc: Language,
     private translate: TranslateService,
     private zone: NgZone,
-    private cd: ChangeDetectorRef,   //// <-- injected
+    private cd: ChangeDetectorRef, 
+    private themeSvc: ThemeService,
+      //// <-- injected
 
   ) {
     this.initializeApp();
@@ -122,6 +125,7 @@ export class AppComponent implements OnInit {
 
 
   async ngOnInit() {
+     this.themeSvc.apply();
 
     await this.fcmService.initializePushNotifications();
     // await this.FirebasePushService.initPush();

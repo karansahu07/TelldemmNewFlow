@@ -47,7 +47,8 @@ export class ChatsPage implements OnInit {
 
   /* ---------- Navigation ---------- */
   openTheme() {
-    this.router.navigate(['settings', 'chats', 'theme']);
+    // this.router.navigate(['settings', 'chats', 'theme']);
+      this.router.navigateByUrl('theme');
   }
   openChatTheme() {
     this.router.navigate(['settings', 'chats', 'wallpaper']);
