@@ -18,7 +18,6 @@
       <div class="msg other">Hey, here's a quick preview</div>
       <div class="msg me">Nice! This changes live. Long-press to open full preview.</div>
     </div>
-    <ion-button fill="clear" class="preview-full" (press)="previewFullScreen()">Preview</ion-button>
   </div>
 
   <!-- Bubble presets carousel -->
@@ -50,7 +49,7 @@
     <ion-list-header>Wallpapers</ion-list-header>
     <div class="h-scroll">
       <div class="wall-thumb" *ngFor="let w of wallpapers" (click)="pickWallpaper(w.url)">
-        <img [src]="w.url" />
+        <img [src]="w.url" loading="lazy" [attr.alt]="'Wallpaper ' + w.id" />
       </div>
       <div class="wall-thumb upload">
         <input type="file" accept="image/*" (change)="onFilePicked($event)" />

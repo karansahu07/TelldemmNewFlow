@@ -2,10 +2,11 @@
   --card-radius: 12px;
 }
 
+/* ---------- Preview area ---------- */
 .preview-area {
   height: 220px;
   margin: 12px;
-  border-radius: 12px;
+  border-radius: var(--card-radius);
   overflow: hidden;
   position: relative;
   box-shadow: 0 6px 18px rgba(0,0,0,0.06);
@@ -13,8 +14,15 @@
   background-image: var(--chat-bg-image, none);
   background-size: cover;
   background-position: center;
+  transition: box-shadow 200ms ease, transform 160ms ease;
 }
 
+.preview-area:focus-within,
+.preview-area:hover {
+  box-shadow: 0 10px 28px rgba(0,0,0,0.08);
+}
+
+/* small preview chat inside preview area */
 .chat-preview {
   display: flex;
   flex-direction: column;
@@ -22,6 +30,7 @@
   padding: 16px;
   height: 100%;
   justify-content: center;
+  pointer-events: none; /* avoid accidental interactions while previewing */
 }
 
 .msg {
@@ -30,6 +39,8 @@
   border-radius: 14px;
   display: inline-block;
   line-height: 1.2;
+  word-break: break-word;
+  transition: transform 180ms ease, box-shadow 180ms ease;
 }
 .msg.me {
   align-self: flex-end;
@@ -47,16 +58,35 @@
   right: 10px;
   bottom: 10px;
   font-size: 12px;
+  z-index: 6;
+  --background: rgba(255,255,255,0.85);
 }
 
-/* horizontal scrollers */
+/* ---------- Horizontal scrollers ---------- */
 .h-scroll {
   display: flex;
   gap: 12px;
   padding: 12px;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin; /* Firefox */
+  scroll-behavior: smooth;
 }
+
+/* Styled thin scrollbar (WebKit) */
+.h-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.h-scroll::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+}
+.h-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Preset cards */
 .preset-card {
   min-width: 88px;
   height: 88px;
@@ -67,19 +97,95 @@
   justify-content:center;
   cursor: pointer;
   scroll-snap-align: start;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.04);
+  user-select: none;
 }
+.preset-card:active { transform: translateY(1px) scale(0.995); }
+.preset-card:hover { transform: translateY(-4px); box-shadow: 0 10px 20px rgba(0,0,0,0.08); }
+
 .preset-card.small { width: 64px; height: 64px; }
-.swatches { display:flex; gap:6px; align-items:center; }
+
+.swatches { display:flex; gap:6px; align-items:center; padding: 6px; }
 .swatch { width:38px; height:38px; border-radius:8px; box-shadow:0 3px 8px rgba(0,0,0,0.08); }
 
-.gradient { min-width: 120px; height: 76px; border-radius: 10px; }
+/* Gradients */
+.gradient {
+  min-width: 120px;
+  height: 76px;
+  border-radius: 10px;
+  overflow: hidden;
+  scroll-snap-align: start;
+  box-shadow: 0 6px 14px rgba(0,0,0,0.04);
+}
 
-.wall-thumb { width: 92px; height: 92px; border-radius: 10px; overflow:hidden; display:flex; align-items:center; justify-content:center; cursor:pointer; }
-.wall-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+/* Wallpaper thumbnails */
+.wall-thumb {
+  flex: 0 0 auto;
+  width: 92px;
+  height: 92px;
+  border-radius: 10px;
+  overflow: hidden;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  scroll-snap-align: start;
+  transition: transform 160ms ease, box-shadow 160ms ease;
+  box-shadow: 0 6px 12px rgba(0,0,0,0.06);
+}
+.wall-thumb:hover { transform: translateY(-6px); box-shadow: 0 12px 30px rgba(0,0,0,0.10); }
+.wall-thumb:active { transform: translateY(-2px) scale(0.995); }
 
-.color-row { padding: 12px; display:flex; gap:12px; }
-.color-dot { width:46px; height:46px; border-radius:50%; box-shadow:0 6px 12px rgba(0,0,0,0.06); cursor:pointer; }
+.wall-thumb img {
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
 
+/* Upload tile */
+.wall-thumb.upload {
+  width: 92px;
+  height: 92px;
+  border: 2px dashed rgba(0,0,0,0.08);
+  background: linear-gradient(180deg, rgba(255,255,255,0.85), rgba(245,245,245,0.6));
+  color: #666;
+  font-weight: 600;
+  gap: 6px;
+  position: relative;
+}
+.wall-thumb.upload input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+.upload-label {
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* Color dot row */
+.color-row {
+  padding: 12px;
+  display:flex;
+  gap:12px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+.color-dot {
+  width:46px;
+  height:46px;
+  border-radius:50%;
+  box-shadow:0 6px 12px rgba(0,0,0,0.06);
+  cursor:pointer;
+  flex: 0 0 auto;
+  transition: transform 120ms ease, box-shadow 120ms ease;
+}
+.color-dot:active { transform: scale(0.96); }
+
+/* Full screen preview overlay */
 .full-wall-preview {
   position: fixed;
   inset: 0;
@@ -88,5 +194,48 @@
   background-position: center;
   display:flex;
   align-items:flex-end;
+  justify-content: center;
+  transition: opacity 220ms ease;
 }
-.full-wall-preview .close { position:absolute; top:18px; right:18px; color:#fff; font-size:22px; padding:6px 8px; background:rgba(0,0,0,0.3); border-radius:6px; cursor:pointer; }
+.full-wall-preview .close {
+  position:absolute;
+  top:18px;
+  right:18px;
+  color:#fff;
+  font-size:22px;
+  padding:6px 8px;
+  background:rgba(0,0,0,0.35);
+  border-radius:6px;
+  cursor:pointer;
+  z-index: 2;
+}
+
+/* Accessibility: focus outline for keyboard users */
+.preset-card:focus,
+.wall-thumb:focus,
+.color-dot:focus {
+  outline: 3px solid rgba(0,123,255,0.16);
+  outline-offset: 4px;
+}
+
+/* Responsive tweaks */
+@media (max-width: 420px) {
+  .preview-area { height: 180px; margin: 10px; }
+  .wall-thumb, .preset-card { width: 84px; height: 84px; }
+  .gradient { min-width: 100px; height: 72px; }
+  .color-dot { width:38px; height:38px; }
+}
+
+/* Lightweight utility to hint horizontal scroll (fade at right) */
+.h-scroll::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 0;
+  height: 100%;
+  width: 36px;
+  pointer-events: none;
+  background: linear-gradient(to left, rgba(255,255,255,0.9), transparent 40%);
+  display: block;
+  z-index: 1;
+}

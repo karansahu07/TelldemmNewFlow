@@ -1,10 +1,9 @@
 // src/app/settings/chats/theme/theme.page.ts
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, ViewChild, ElementRef, ChangeDetectionStrategy } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-// import { ThemeService, ChatTheme } from '../../../../services/theme.service';
-import { ToastController, AnimationController, PopoverController, IonicModule } from '@ionic/angular';
-import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { ToastController, AnimationController, LoadingController, IonicModule } from '@ionic/angular';
+import { TranslateModule } from '@ngx-translate/core';
 import { ThemeService,ChatTheme } from 'src/app/services/theme';
 
 const PRESET_BUBBLES = [
@@ -23,17 +22,23 @@ const PRESET_GRADIENTS = [
 ];
 
 const PRESET_WALLS = [
-  { id: 'wp1', url: 'assets/wallpapers/wp1.jpg' },
-  { id: 'wp2', url: 'assets/wallpapers/wp2.jpg' },
-  { id: 'wp3', url: 'assets/wallpapers/wp3.jpg' },
+  { id: 'wp1', url: 'assets/wallpaper/wp1.jpg' },
+  { id: 'wp2', url: 'assets/wallpaper/wp2.jpg' },
+  { id: 'wp3', url: 'assets/wallpaper/wp3.jpg' },
+  { id: 'wp4', url: 'assets/wallpaper/wp4.jpg' },
+  { id: 'wp5', url: 'assets/wallpaper/wp5.jpg' },
+  { id: 'wp6', url: 'assets/wallpaper/wp6.jpg' },  
+  { id: 'wp7', url: 'assets/wallpaper/wp7.jpg' },
+  { id: 'wp8', url: 'assets/wallpaper/wp8.jpg' },
 ];
+
 @Component({
   selector: 'app-theme',
   templateUrl: './theme.page.html',
   styleUrls: ['./theme.page.scss'],
   standalone: true,
   imports: [IonicModule, CommonModule, FormsModule, TranslateModule],
-
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class ThemePage implements OnInit {
 
@@ -47,17 +52,31 @@ export class ThemePage implements OnInit {
   // small ephemeral list of saved presets
   savedPresets: ChatTheme[] = [];
 
+  private loading?: HTMLIonLoadingElement;
+
   constructor(
     private themeSvc: ThemeService,
     private toastCtrl: ToastController,
-    private animCtrl: AnimationController
+    private animCtrl: AnimationController,
+    private loadingCtrl: LoadingController
   ) {
     this.theme = this.themeSvc.load();
   }
 
-  ngOnInit() {
-    // ensure live theme applied to preview area
-    this.themeSvc.apply(this.theme);
+  async ngOnInit() {
+    // Show loading until theme CSS is applied
+    this.loading = await this.loadingCtrl.create({
+      message: 'Loading theme...',
+      spinner: 'crescent'
+    });
+    await this.loading.present();
+
+    // Defer theme application slightly to avoid blocking initial render
+    setTimeout(async () => {
+      // ensure live theme applied to preview area
+      this.themeSvc.apply(this.theme);
+      await this.loading?.dismiss();
+    }, 3);
   }
 
   // user picks bubble colors

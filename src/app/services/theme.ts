@@ -39,12 +39,12 @@ export interface ChatTheme {
 })
 export class ThemeService {
   readonly default: ChatTheme = {
-    meBubble: '#DCF8C6',
+    meBubble: '#f5afaf',
     otherBubble: '#FFFFFF',
     bubbleTextColorMe: '#000000',
     bubbleTextColorOther: '#000000',
     backgroundType: 'solid',
-    backgroundValue: '#ffffff',
+    backgroundValue: '#685f5fff',
   };
 
   constructor() {}
