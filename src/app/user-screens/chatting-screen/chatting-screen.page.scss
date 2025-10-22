@@ -11,18 +11,8 @@ ion-toolbar {
 }
 
 /* ===== Chat Background ===== */
-// .chat-background {
-//   --background: url('/assets/images/chatbackground.svg');
-//   background-size: cover;
-//   background-position: center;
-//   background-repeat: no-repeat;
-// }
-
-/* Chat background wrapper — keep your existing .chat-background but prefer vars */
 .chat-background {
-  /* if background image/gradient is provided it will override solid color */
-  --background: var(--chat-bg, transparent);
-  background-image: var(--chat-bg-image, url('/assets/images/chatbackground.svg'));
+  --background: url('/assets/images/chatbackground.svg');
   background-size: cover;
   background-position: center;
   background-repeat: no-repeat;
@@ -51,55 +41,29 @@ ion-toolbar {
   margin : 5px 0px;
 }
 
-// .sender-message {
-//   background: #FFD4D4;
-//   align-self: flex-end;
-// }
-
-/* Message Bubbles */
 .sender-message {
-  background: var(--chat-bubble-me, #FFD4D4);
+  background: #FFD4D4;
   align-self: flex-end;
-  color: var(--chat-bubble-text-me, #000);
 }
-
-// .receiver-message {
-//   background: #FFFFFF;
-//   align-self: flex-start;
-// }
 
 .receiver-message {
-  background: var(--chat-bubble-other, #FFFFFF);
+  background: #FFFFFF;
   align-self: flex-start;
-  color: var(--chat-bubble-text-other, #000);
 }
 
-// .message-text {
-//   color: #000;
-//   font-size: 16px;
-//   margin: 0;
-//   font-family: Montserrat-SemiBold;
-// }
-
-/* message text explicitly inherits the bubble text color */
 .message-text {
-  color: inherit; /* uses the bubble text color from above */
+  color: #000;
   font-size: 16px;
   margin: 0;
   font-family: Montserrat-SemiBold;
 }
 
-// .time-stamp {
-//   font-size: 13px;
-//   color: #444;
-//   margin: 0 0 2px 0;
-//   white-space: nowrap;
-//   text-transform: lowercase;
-// }
-
-/* small safety: timestamp color derived from bubble text with reduced opacity */
 .time-stamp {
-  color: rgba(var(--chat-bubble-text-other, #000000) /* fallback handled by browser */, 0.75);
+  font-size: 13px;
+  color: #444;
+  margin: 0 0 2px 0;
+  white-space: nowrap;
+  text-transform: lowercase;
 }
 
 /* ===== Message Alignment ===== */
@@ -357,18 +321,11 @@ ion-datetime {
 }
 
 /* Reply Preview Styles (in footer) */
-// .reply-preview {
-//   background: var(--ion-color-light);
-//   border-top: 1px solid var(--ion-color-medium);
-//   padding: 8px 16px;
-//   margin: 0 -16px 8px -16px;
-// }
-
-/* Reply preview / reply-line using derived colors */
 .reply-preview {
-  background: color-mix(in srgb, var(--chat-bg, #ffffff), black 2%);
-  border-top: 1px solid rgba(0,0,0,0.06);
+  background: var(--ion-color-light);
+  border-top: 1px solid var(--ion-color-medium);
   padding: 8px 16px;
+  margin: 0 -16px 8px -16px;
 }
 
 .reply-preview .reply-header {
@@ -516,19 +473,14 @@ ion-datetime {
   display: block;
 }
 
-// .pinned-message-header {
-//   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-//   color: white;
-//   padding: 8px 16px;
-//   cursor: pointer;
-//   border-top: 1px solid rgba(255,255,255,0.1);
-// }
-
-/* Pinned header can use chat bubble me color for accent */
 .pinned-message-header {
-  background: linear-gradient(135deg, color-mix(in srgb, var(--chat-bubble-me, #667eea), white 8%), var(--chat-bubble-me, #667eea));
-  color: color-contrast(var(--chat-bubble-me, #ffffff), #000, #fff); /* fallback may not be supported everywhere */
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 8px 16px;
+  cursor: pointer;
+  border-top: 1px solid rgba(255,255,255,0.1);
 }
+
 .pinned-message-header .pinned-header-content .pinned-header-info {
   display: flex;
   align-items: center;
@@ -1032,6 +984,16 @@ ion-datetime {
     transform: scale(1.5) translateY(-25px);
     filter: blur(4px);
   }
+}
+
+.message-bubble.fade-out {
+  pointer-events: none;
+}
+
+/* already present in your CSS, keep as-is */
+.message-bubble {
+  position: relative;
+  overflow: visible;
 }
 
 /* Message breaking into particles */

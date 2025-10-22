@@ -57,6 +57,7 @@ import { Message, PinnedMessage } from 'src/types';
 import { AuthService } from 'src/app/auth/auth.service';
 import { ApiService } from 'src/app/services/api/api.service';
 import {
+  IUser,
   IAttachment,
   IConversation,
   IMessage,
@@ -68,6 +69,20 @@ import { throttleTime } from 'rxjs/operators';
 import { PresenceService } from 'src/app/services/presence.service';
 import { switchMap } from 'rxjs/operators';
 import { resolve } from 'path';
+
+type UIMessageStatus =
+  | 'failed'
+  | 'pending'
+  | 'sent'
+  | 'delivered'
+  | 'read'
+  | null;
+
+interface IconDescriptor {
+  name: string;
+  cls: string;
+  title?: string;
+}
 
 @Component({
   selector: 'app-chatting-screen',
@@ -87,8 +102,10 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   messages: Message[] = [];
   groupedMessages: {
     date: string;
-    messages: (Message & { isMe: boolean })[];
+    messages: (Message & IMessage & { isMe: boolean })[];
   }[] = [];
+
+  replyTo: { message: IMessage; sender: IUser | null } | null = null;
 
   messageText = '';
   receiverId = '';
@@ -119,7 +136,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   private intersectionObserver?: IntersectionObserver;
 
   roomId = '';
-  chatType: 'private' | 'group' = 'private';
+  // chatType: 'private' | 'group' = 'private';
   groupName = '';
   isGroup: any;
   receiver_name = '';
@@ -139,7 +156,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   attachmentPath: string = '';
   lastPressedMessage: any = null;
   longPressTimeout: any;
-  replyToMessage: Message | null = null;
+  replyToMessage: IMessage | null = null;
   capturedImage = '';
   pinnedMessage: PinnedMessage | null = null;
   pinnedMessageDetails: any = null;
@@ -212,6 +229,9 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   private onValueUnsubs: Array<() => void> = [];
   private emojiTargetMsg: Message | null = null;
 
+  private allMessage: IMessage[] = [];
+  chatType : string | null = null;
+
   constructor(
     private chatService: FirebaseChatService,
     private route: ActivatedRoute,
@@ -253,11 +273,12 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
       (await this.secureStorage.getItem('receiver_name')) ||
       '';
 
-    const rawId = this.route.snapshot.queryParamMap.get('receiverId') || '';
-    const chatTypeParam = this.route.snapshot.queryParamMap.get('isGroup');
-    const phoneFromQuery = this.route.snapshot.queryParamMap.get('receiver_phone');
+    // const rawId = this.route.snapshot.queryParamMap.get('receiverId') || '';
+    // const chatTypeParam = this.route.snapshot.queryParamMap.get('isGroup');
+    // const phoneFromQuery =
+      // this.route.snapshot.queryParamMap.get('receiver_phone');
 
-    this.chatType = chatTypeParam === 'true' ? 'group' : 'private';
+    // this.chatType = chatTypeParam === 'true' ? 'group' : 'private';
 
     // if (this.chatType === 'group') {
     //   this.roomId = decodeURIComponent(rawId);
@@ -306,7 +327,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     // }
 
     // await this.loadFromLocalStorage();
-    // this.listenForMessages();
+    this.listenForMessages();
     // this.setupPinnedMessageListener();
     // this.checkMobileView();
     // setTimeout(() => this.scrollToBottom(), 100);
@@ -422,30 +443,142 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   async ionViewWillEnter() {
     await this.chatService.loadMessages();
     this.chatService.syncMessagesWithServer();
-    this.chatService.getMessages().subscribe(async (msgs) => {
-      // console.log('Received for ui->', msgs);
+    this.chatService.getMessages().subscribe(async (msgs: any) => {
       this.groupedMessages = (await this.groupMessagesByDate(
         msgs as any[]
       )) as any[];
-      // console.log("messages", this.groupedMessages)
+      // msgs.forEach((msg: any) => console.log({msg}));
+      this.allMessage = msgs as IMessage[];
+      for (const msg of msgs) {
+        if (!msg.isMe) {
+          console.log('Marking read from chat screen');
+          this.chatService.markAsRead(msg.msgId);
+        }
+      }
     });
+
+    //scroll to bottom pagination load messages
+    const scrollElement = await this.ionContent.getScrollElement();
+    const distanceFromBottom =
+      scrollElement.scrollHeight -
+      (scrollElement.scrollTop + scrollElement.clientHeight);
+
+    if (distanceFromBottom < 300) {
+      this.scrollToBottomSmooth();
+    }
+
     this.currentConv = this.chatService.currentChat;
     Keyboard.setScroll({ isDisabled: false });
     this.senderId = this.authService.authData?.userId || '';
     this.sender_phone = this.authService.authData?.phone_number || '';
     this.sender_name = this.authService.authData?.name || '';
     const currentChat = this.chatService.currentChat;
+    console.log({currentChat})
+  this.chatType = currentChat?.type || "";
+
+if (this.chatType === 'private') {
+  const parts: string[] = currentChat?.roomId?.split('_') || [];
+  this.receiverId =
+    parts.find((p: string | null) => p !== this.senderId) ??
+    parts[parts.length - 1];
+} else {
+  this.receiverId = currentChat?.roomId || '';
+}
     this.receiverProfile =
       (currentChat as any).avatar || (currentChat as any).groupAvatar || null;
     this.chatTitle = currentChat?.title || null;
+
+    // ✅ Scroll to bottom after first load
+    setTimeout(() => this.scrollToBottomSmooth(), 100);
   }
 
   async ionViewWillLeave() {
     try {
-      this.chatService.closeChat();
+      // await this.chatService.closeChat();
       console.log('Chat is closed');
     } catch (error) {
       console.error('error in closing chat', error);
+    }
+  }
+  async onBack() {
+    await this.chatService.closeChat();
+    this.router.navigate(['/home-screen']);
+  }
+
+  private computeMessageStatus(msg: IMessage): UIMessageStatus {
+    if (!msg) return null;
+
+    const readStatus = !!msg.receipts?.read?.status;
+    if (readStatus) return 'read';
+
+    const deliveredStatus = !!msg.receipts?.delivered?.status;
+    if (deliveredStatus) return 'delivered';
+
+    if (
+      msg.status === 'failed' ||
+      msg.status === 'pending' ||
+      msg.status === 'sent'
+    ) {
+      return msg.status;
+    }
+
+    return null;
+  }
+
+  /**
+   * Find a message by msgId across all rooms in this._messages$.value (Map<roomId, IMessage[]>)
+   * and return an IconDescriptor according to the canonical status.
+   *
+   * Accepts only msgId (string).
+   */
+  getStatusIconDescriptorByMsgId(msgId: string): IconDescriptor | null {
+    if (!msgId || !this.allMessage.length) return null;
+
+    // const messagesMap: Map<string, IMessage[]> = (this._messages$ as any).value;
+    // if (!messagesMap || !(messagesMap instanceof Map)) return null;
+
+    // linear search across rooms — fine for small-to-medium stores. See note below.
+    // for (const [, list] of messagesMap.entries()) {
+    const msg = this.allMessage.find((m) => m.msgId === msgId);
+    if (!msg?.isMe) {
+      return null;
+    }
+
+    const status = this.computeMessageStatus(msg);
+
+    switch (status) {
+      case 'read':
+        return {
+          name: 'checkmark-done-outline',
+          cls: 'status-icon read',
+          title: 'Read',
+        };
+      case 'delivered':
+        return {
+          name: 'checkmark-done-outline',
+          cls: 'status-icon delivered',
+          title: 'Delivered',
+        };
+      case 'sent':
+        return {
+          name: 'checkmark-outline',
+          cls: 'status-icon sent',
+          title: 'Sent',
+        };
+      case 'pending':
+        return {
+          name: 'time-outline',
+          cls: 'status-icon pending',
+          title: 'Pending',
+        };
+      case 'failed':
+        return {
+          name: 'alert-circle-outline',
+          cls: 'status-icon failed',
+          title: 'Failed',
+        };
+      default:
+        return null;
     }
   }
 
@@ -943,7 +1076,9 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   onMessagePress(message: any) {
-    const index = this.selectedMessages.findIndex((m) => m.msgId === message.msgId);
+    const index = this.selectedMessages.findIndex(
+      (m) => m.msgId === message.msgId
+    );
     if (index > -1) {
       this.selectedMessages.splice(index, 1);
     } else {
@@ -953,6 +1088,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
 
   clearSelection() {
     this.selectedMessages = [];
+    this.replyTo = null;
   }
 
   private async markMessagesAsRead() {
@@ -985,9 +1121,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   toggleSelection(msg: any) {
-    const index = this.selectedMessages.findIndex(
-      (m) => m.msgId === msg.msgId
-    );
+    const index = this.selectedMessages.findIndex((m) => m.msgId === msg.msgId);
     if (index > -1) {
       this.selectedMessages.splice(index, 1);
     } else {
@@ -1057,11 +1191,20 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  setReplyToMessage(message: Message) {
+  setReplyToMessage(message: IMessage) {
     this.replyToMessage = message;
     this.selectedMessages = [];
     this.lastPressedMessage = null;
-
+    this.replyTo = { message, sender: null };
+    if (!message.isMe) {
+      let user = this.chatService.currentUsers.find(
+        (u) => u.userId === message.sender
+      ) as IUser;
+      if (!user) {
+        user = { username: this.chatTitle as string } as IUser;
+      }
+      this.replyTo = { ...this.replyTo, sender: user };
+    }
     setTimeout(() => {
       const inputElement = document.querySelector(
         'ion-textarea'
@@ -1236,30 +1379,19 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
                   } finally {
                     resolve();
                   }
-                }, 1100); // match CSS transition duration
+                }, 1800); // match CSS transition duration
               });
 
               // Now apply deletions to server/db for each selected message
               for (const msg of [...this.selectedMessages]) {
-                const key = msg.key;
+                const key = msg.msgId;
                 if (!key) continue;
 
                 // DELETE FOR ME: mark deleted for this user
                 if (doForMe) {
                   try {
-                    if (this.chatService.deleteMessageForMe) {
-                      await this.chatService.deleteMessageForMe(
-                        this.roomId,
-                        key,
-                        currentUserId
-                      );
-                    } else {
-                      const updates: any = {};
-                      updates[
-                        `/chats/${this.roomId}/${key}/deletedFor/${currentUserId}`
-                      ] = true;
-                      await update(ref(db), updates);
-                    }
+                    this.chatService.deleteMessage(key, false);
+                    console.log('calling from chatting screen');
                   } catch (err) {
                     console.warn('deleteForMe failed for key', key, err);
                   }
@@ -1268,31 +1400,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
                 // DELETE FOR EVERYONE: attempt for all messages (not restricted to sender)
                 if (doForEveryone) {
                   try {
-                    if (this.chatService.deleteMessageForEveryone) {
-                      // try service method (best)
-                      await this.chatService.deleteMessageForEveryone(
-                        this.roomId,
-                        key,
-                        currentUserId,
-                        this.chatType === 'group'
-                          ? this.groupMembers.map((g) => String(g.user_id))
-                          : [this.receiverId, this.senderId]
-                      );
-                    } else {
-                      // fallback: set convenience flags in DB so clients hide the message
-                      const updates: any = {};
-                      updates[
-                        `/chats/${this.roomId}/${key}/deletedForEveryone`
-                      ] = true;
-                      updates[`/chats/${this.roomId}/${key}/deletedBy`] =
-                        currentUserId;
-                      updates[`/chats/${this.roomId}/${key}/deletedAt`] =
-                        Date.now();
-                      // optionally clear content:
-                      // updates[`/chats/${this.roomId}/${key}/text`] = '';
-                      // updates[`/chats/${this.roomId}/${key}/attachment`] = null;
-                      await update(ref(db), updates);
-                    }
+                    this.chatService.deleteMessage(key, true);
                   } catch (err) {
                     console.warn('deleteForEveryone failed for key', key, err);
                   }
@@ -1325,6 +1433,24 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     });
 
     await alert.present();
+  }
+
+  isMessageHiddenForUser(msg: any): boolean {
+    if (!msg) return false;
+
+    if (msg.deletedFor && msg.deletedFor.everyone === true) {
+      return true;
+    }
+
+    if (
+      msg.deletedFor &&
+      Array.isArray(msg.deletedFor.users) &&
+      msg.deletedFor.users.includes(String(this.senderId))
+    ) {
+      return true;
+    }
+
+    return false;
   }
 
   private applyDeletionFilters(dm: Message): boolean {
@@ -1543,7 +1669,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   findPinnedMessageDetails(messageId: string) {
     for (const group of this.groupedMessages) {
       const foundMessage = group.messages.find(
-        (msg) => msg.message_id === messageId
+        (msg) => msg.msgId === messageId
       );
       if (foundMessage) {
         this.pinnedMessageDetails = foundMessage;
@@ -1712,18 +1838,50 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     return message.msgId;
   }
 
+  // async ngAfterViewInit() {
+  //   if (this.ionContent) {
+  //     this.ionContent.ionScroll.subscribe(async (event: any) => {
+  //       if (
+  //         event.detail.scrollTop < 20 &&
+  //         this.chatService.hasMoreMessages &&
+  //         !this.isLoadingMore
+  //       ) {
+  //         await this.chatService.loadMessages();
+  //         // await this.loadMoreMessages();
+  //       } else {
+  //         console.log('Not more messages');
+  //       }
+  //     });
+  //   }
+
+  //   this.setDynamicPadding();
+  //   window.addEventListener('resize', this.resizeHandler);
+
+  //   const footer = this.el.nativeElement.querySelector(
+  //     '.footer-fixed'
+  //   ) as HTMLElement;
+  //   if (footer && 'ResizeObserver' in window) {
+  //     const ro = new (window as any).ResizeObserver(() =>
+  //       this.setDynamicPadding()
+  //     );
+  //     ro.observe(footer);
+  //     (this as any)._ro = ro;
+  //   }
+  // }
+
+  //new this method used in pagination
   async ngAfterViewInit() {
     if (this.ionContent) {
       this.ionContent.ionScroll.subscribe(async (event: any) => {
+        const scrollTop = event.detail.scrollTop;
+
+        // 🟢 Load older messages when user scrolls up near top
         if (
-          event.detail.scrollTop < 20 &&
+          scrollTop < 100 &&
           this.chatService.hasMoreMessages &&
           !this.isLoadingMore
         ) {
-          await this.chatService.loadMessages();
-          // await this.loadMoreMessages();
-        } else {
-          console.log('Not more messages');
+          await this.loadOlderMessages();
         }
       });
     }
@@ -1740,6 +1898,42 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
       );
       ro.observe(footer);
       (this as any)._ro = ro;
+    }
+  }
+
+  //new function used in pagination
+  async loadOlderMessages() {
+    if (this.isLoadingMore || !this.chatService.hasMoreMessages) return;
+
+    this.isLoadingMore = true;
+
+    // Remember current scroll height
+    const scrollElement = await this.ionContent.getScrollElement();
+    const oldScrollHeight = scrollElement.scrollHeight;
+
+    try {
+      console.log('⬆️ Loading older messages...');
+      await this.chatService.loadMessages(); // loads next offset from SQLite
+
+      // After messages load, adjust scroll position to stay at same spot
+      setTimeout(async () => {
+        const newScrollHeight = scrollElement.scrollHeight;
+        const scrollDiff = newScrollHeight - oldScrollHeight;
+        await this.ionContent.scrollByPoint(0, scrollDiff, 0);
+      }, 100);
+    } catch (error) {
+      console.error('❌ Error loading older messages:', error);
+    } finally {
+      this.isLoadingMore = false;
+    }
+  }
+
+  //new function used in pagination
+  scrollToBottomSmooth() {
+    if (this.ionContent) {
+      setTimeout(() => {
+        this.ionContent.scrollToBottom(200);
+      }, 100);
     }
   }
 
@@ -1892,8 +2086,8 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     //     }
     //     await Promise.resolve();
     //     this.scrollToBottom();
-    //     this.observeVisibleMessages();
     //   });
+    this.observeVisibleMessages();
   }
 
   private async markDisplayedMessagesAsRead() {
@@ -1917,6 +2111,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
       if (msgIndex === -1) return;
 
       const msg = this.displayedMessages[msgIndex];
+      console.log({ msg });
 
       if (!msg.read && msg.receiver_id === this.senderId) {
         const observer = new IntersectionObserver(
@@ -2184,7 +2379,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     this.messageText = '';
   }
 
-  setReplyTo(message: Message) {
+  setReplyTo(message: IMessage) {
     this.replyToMessage = message;
   }
 
@@ -2200,7 +2395,7 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
         text: plainText,
         timestamp: Date.now(),
         msgId: uuidv4(),
-        replyToMsgId: this.replyToMessage?.message_id || '',
+        replyToMsgId: this.replyTo?.message.msgId || '',
         isEdit: false,
         type: 'text',
         reactions: [],
@@ -2502,92 +2697,19 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   }
 
   async addReaction(msg: IMessage, emoji: string) {
-    // const userId = this.senderId;
-    // const current = msg.reactions?.findIndex(r=>r.userId == userId) || null;
-    // const newVal = current?.emoji === emoji ? null : emoji;
-    // // 1) Optimistic UI update
-    // msg.reactions = { ...(msg.reactions || {}) };
-    // if (newVal) msg.reactions[userId] = newVal;
-    // else delete msg.reactions[userId];
-    // // If you maintain grouped/displayed arrays, ensure they reflect the change:
-    // try {
-    //   // update the message inside displayed/all arrays if present
-    //   const idxAll = this.allMessages.findIndex((m) => m.msgId === msg.key);
-    //   if (idxAll !== -1) {
-    //     this.allMessages[idxAll] = { ...this.allMessages[idxAll], ...msg };
-    //   }
-    //   const idxDisp = this.displayedMessages.findIndex(
-    //     (m) => m.key === msg.key
-    //   );
-    //   if (idxDisp !== -1) {
-    //     this.displayedMessages[idxDisp] = {
-    //       ...this.displayedMessages[idxDisp],
-    //       ...msg,
-    //     };
-    //   }
-    //   // refresh grouped view (optional, expensive if called very often)
-    //   this.groupedMessages = await this.groupMessagesByDate(
-    //     this.displayedMessages
-    //   );
-    //   // persist a small cache
-    //   this.saveToLocalStorage();
-    // } catch (e) {
-    //   console.warn('update local arrays failed', e);
-    // }
-    // 2) Persist to Firebase
-    // try {
-    //   const db = getDatabase();
-    //   const path = `chats/${this.roomId}/${msg.key}/reactions/${userId}`;
-    //   if (newVal) {
-    //     await set(ref(db, path), newVal);
-    //     //console.log('✅ Reaction saved:', newVal);
-    //   } else {
-    //     await remove(ref(db, path));
-    //     //console.log('✅ Reaction removed');
-    //   }
-    //   // 3) After successful write -> exit selection mode
-    //   this.selectedMessages = [];
-    //   this.lastPressedMessage = null;
-    //   // if you have UI flags for selection, reset them too:
-    //   // e.g. this.showSelectionToolbar = false; (replace with your actual flag)
-    //   // Also ensure any CSS 'selected' classes will update because selectedMessages empty
-    // } catch (err) {
-    //   console.error('❌ Reaction save/remove error:', err);
-    //   // Optionally rollback optimistic UI on error:
-    //   try {
-    //     // revert local change by refetching msg from allMessages (if exists) or clear reaction
-    //     const idx = this.allMessages.findIndex((m) => m.key === msg.key);
-    //     if (idx !== -1) {
-    //       // re-sync from stored version if you have one; fallback: remove current user's reaction
-    //       delete this.allMessages[idx].reactions?.[userId];
-    //       delete msg.reactions?.[userId];
-    //     }
-    //     // this.displayedMessages = this.displayedMessages.map(m => m.key === msg.key ? { ...this.displayedMessages.find(x => x.key === msg.key) } : m);
-    //     this.displayedMessages = this.displayedMessages.map((m) =>
-    //       m.key === msg.key
-    //         ? {
-    //             ...(this.displayedMessages.find((x) => x.key === msg.key) ||
-    //               ({} as Message)),
-    //           }
-    //         : m
-    //     );
-    //     this.groupedMessages = await this.groupMessagesByDate(
-    //       this.displayedMessages
-    //     );
-    //     this.saveToLocalStorage();
-    //   } catch (e) {
-    //     /* ignore rollback errors */
-    //   }
-    //   // keep UI selection cleared? you can choose to keep selection if error:
-    //   this.selectedMessages = [];
-    //   this.lastPressedMessage = null;
-    //   const t = await this.toastCtrl.create({
-    //     message: 'Failed to update reaction',
-    //     duration: 1600,
-    //     color: 'danger',
-    //   });
-    //   await t.present();
-    // }
+    const userId = this.senderId;
+    const current = msg.reactions?.find((r) => r.userId == userId) || null;
+    const newVal = current?.emoji === emoji ? null : emoji;
+
+    try {
+      await this.chatService.setQuickReaction({
+        msgId: msg.msgId,
+        userId,
+        emoji: newVal,
+      });
+    } catch (error) {
+      console.error('Reaction not save', error);
+    }
   }
 
   openEmojiKeyboard(msg: Message) {
@@ -2654,70 +2776,66 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     return list.slice(0, 3);
   }
 
+  getReactionsCount(msg: IMessage) {
+    return msg.reactions.filter((r) => !!r.emoji).length || 0;
+  }
+
   async onReactionBadgeClick(
     ev: Event,
-    msg: Message,
-    badge: { emoji: string; count: number; mine: boolean }
+    msg: IMessage,
+    badge: { emoji: string | null; userId: string }
   ) {
-    ev.stopPropagation();
-
-    // Build header text: "1 reaction" / "3 reactions"
-    const header =
-      badge.count === 1 ? '1 reaction' : `${badge.count} reactions`;
-
-    // If badge.mine === true, show the remove option; else show only view
-    const buttons: any[] = [];
-
-    // Show the emoji/count as a disabled info row
-    buttons.push({
-      text: `${badge.emoji}  ${badge.count}`,
-      icon: undefined,
-      role: undefined,
-      handler: () => {
-        /* noop - disabled by setting css or no-op here */
-      },
-      cssClass: 'reaction-info-button',
-    });
-
-    // If the current user reacted with this emoji, show "Tap to remove"
-    if (badge.mine) {
-      buttons.push({
-        text: 'Tap to remove',
-        icon: 'trash',
-        handler: async () => {
-          // call existing addReaction which toggles/remove when same emoji present
-          // await this.addReaction(msg, badge.emoji);
-        },
-      });
-    } else {
-      // Optionally allow user to react with this same emoji (i.e., add their reaction)
-      buttons.push({
-        text: `React with ${badge.emoji}`,
-        icon: undefined,
-        handler: async () => {
-          // await this.addReaction(msg, badge.emoji);
-        },
-      });
-    }
-
-    // Cancel button
-    buttons.push({ text: 'Cancel', role: 'cancel' });
-
-    const sheet = await this.actionSheetCtrl.create({
-      header,
-      buttons,
-      cssClass: 'reaction-action-sheet',
-    });
-
-    await sheet.present();
+    // ev.stopPropagation();
+    // // Build header text: "1 reaction" / "3 reactions"
+    // const header =
+    //   badge.count === 1 ? '1 reaction' : `${badge.count} reactions`;
+    // // If badge.mine === true, show the remove option; else show only view
+    // const buttons: any[] = [];
+    // // Show the emoji/count as a disabled info row
+    // buttons.push({
+    //   text: `${badge.emoji}  ${badge.count}`,
+    //   icon: undefined,
+    //   role: undefined,
+    //   handler: () => {
+    //     /* noop - disabled by setting css or no-op here */
+    //   },
+    //   cssClass: 'reaction-info-button',
+    // });
+    // // If the current user reacted with this emoji, show "Tap to remove"
+    // if (badge.mine) {
+    //   buttons.push({
+    //     text: 'Tap to remove',
+    //     icon: 'trash',
+    //     handler: async () => {
+    //       // call existing addReaction which toggles/remove when same emoji present
+    //       // await this.addReaction(msg, badge.emoji);
+    //     },
+    //   });
+    // } else {
+    //   // Optionally allow user to react with this same emoji (i.e., add their reaction)
+    //   buttons.push({
+    //     text: `React with ${badge.emoji}`,
+    //     icon: undefined,
+    //     handler: async () => {
+    //       // await this.addReaction(msg, badge.emoji);
+    //     },
+    //   });
+    // }
+    // // Cancel button
+    // buttons.push({ text: 'Cancel', role: 'cancel' });
+    // const sheet = await this.actionSheetCtrl.create({
+    //   header,
+    //   buttons,
+    //   cssClass: 'reaction-action-sheet',
+    // });
+    // await sheet.present();
   }
 
   goToProfile() {
+    // const isGroup = this.chatType === 'group';
     const queryParams: any = {
-      receiverId: this.chatType === 'group' ? this.roomId : this.receiverId,
-      receiver_phone: this.receiver_phone,
-      receiver_name: this.receiver_name,
-      isGroup: this.chatType === 'group',
+      receiverId: this.receiverId,
+      isGroup: this.chatType === 'group' ? 'true' : 'false'
     };
 
     this.router.navigate(['/profile-screen'], { queryParams });

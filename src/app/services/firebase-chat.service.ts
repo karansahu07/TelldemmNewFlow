@@ -25,9 +25,17 @@ import {
   onChildChanged,
   off,
   orderByChild,
+  onDisconnect,
 } from 'firebase/database';
 import { runTransaction as rtdbRunTransaction } from 'firebase/database';
-import { BehaviorSubject, firstValueFrom, map, Observable, take } from 'rxjs';
+import {
+  BehaviorSubject,
+  firstValueFrom,
+  map,
+  Observable,
+  retry,
+  take,
+} from 'rxjs';
 import { getDatabase, remove, update } from 'firebase/database';
 import { IChat, IChatMeta, Message, PinnedMessage } from 'src/types';
 import { ApiService } from './api/api.service';
@@ -41,10 +49,15 @@ import {
   SqliteService,
 } from './sqlite.service';
 import { ContactSyncService } from './contact-sync.service';
-import { Platform } from '@ionic/angular';
+import { IonCard, Platform } from '@ionic/angular';
 import { NetworkService } from './network-connection/network.service';
 import { EncryptionService } from './encryption.service';
 import { AuthService } from '../auth/auth.service';
+
+interface MemberPresence {
+  isOnline: boolean;
+  lastSeen: number | null;
+}
 
 @Injectable({ providedIn: 'root' })
 export class FirebaseChatService {
@@ -69,6 +82,11 @@ export class FirebaseChatService {
   private _totalMessages: number = 0;
 
   private _userChatsListener: (() => void) | null = null;
+  // 🟢 Map of userId → { isOnline, lastSeen }
+  private membersPresence: Map<string, MemberPresence> = new Map();
+
+  // 🟢 Map of userId → unsubscribe function for presence listener
+  private _memberUnsubs: Map<string, () => void> = new Map();
   private _roomMessageListner: any = null;
 
   currentChat: IConversation | null = null;
@@ -138,6 +156,8 @@ export class FirebaseChatService {
       : `${receiverId}_${senderId}`;
   }
 
+  private presenceCleanUp: any = null;
+
   async openChat(chat: any, isNew: boolean = false) {
     let conv: any = null;
     if (isNew) {
@@ -158,8 +178,19 @@ export class FirebaseChatService {
     } else {
       conv = this.currentConversations.find((c) => c.roomId === chat.roomId);
     }
-
+    let memberIds: string[] = [];
+    if (conv.type === 'private') {
+      const parts = conv.roomId.split('_');
+      const receiverId =
+        parts.find((p: string) => p !== this.senderId) ??
+        parts[parts.length - 1];
+      memberIds.push(receiverId);
+    } else {
+      memberIds = (conv as IConversation).members || [];
+    }
     this.currentChat = { ...(conv as IConversation) };
+
+    this.presenceCleanUp = this.isReceiverOnline(memberIds);
 
     this._roomMessageListner = this.listenRoomStream(conv?.roomId as string, {
       onAdd: async (msgKey, data, isNew) => {
@@ -170,21 +201,44 @@ export class FirebaseChatService {
           this.pushMsgToChat({ msgId: msgKey, ...data, text: decryptedText });
         }
       },
-      onChange(msgKey, data) {
-        console.log(`Message updated with key ${msgKey}-> `, data);
+      onChange: async (msgKey, data) => {
+        this.updateMessageLocally({ ...data, msgId: msgKey });
       },
       onRemove(msgKey) {
         console.log(`Message removed with key ${msgKey}`);
       },
     });
+
+   this.setUnreadCount();
+  }
+
+   async setUnreadCount(roomId : string | null = null, count : number = 0){
+     const metaRef = rtdbRef(
+      this.db,
+      `userchats/${this.senderId}/${roomId || this.currentChat?.roomId}`
+    );
+    rtdbUpdate(metaRef, { unreadCount: count });
   }
 
   async closeChat() {
-    if (this._roomMessageListner) {
-      this._roomMessageListner();
-      this._roomMessageListner = null;
+    try {
+      if (this._roomMessageListner) {
+        try {
+          this._roomMessageListner();
+        } catch (error) {}
+        this._roomMessageListner = null;
+      }
+      if (this.presenceCleanUp) {
+        try {
+          this.presenceCleanUp();
+        } catch (error) {}
+        this.presenceCleanUp = null;
+      }
+      this.currentChat = null;
+      console.info('Chat closed');
+    } catch (error) {
+      console.error('Error closing chat', error);
     }
-    this.currentChat = null;
   }
 
   async initApp(rootUserId?: string) {
@@ -200,7 +254,7 @@ export class FirebaseChatService {
           throw new Error('user is offline');
         }
       });
-      this.loadConversations();
+      // this.loadConversations();
       let normalizedContacts: any[] = [];
       if (this.isWeb()) {
         try {
@@ -214,10 +268,13 @@ export class FirebaseChatService {
       }
 
       const pfUsers = await this.contactsyncService.getMatchedUsers();
+      console.log({pfUsers})
       await this.sqliteService.upsertContacts(pfUsers);
       this._deviceContacts$.next([...normalizedContacts]);
       this._platformUsers$.next([...pfUsers]);
       await this.loadConversations();
+      this.setupPresence();
+      //  this.syncReceipt();
       this.isAppInitialized = true;
     } catch (err) {
       console.error('initApp failed', err);
@@ -236,6 +293,243 @@ export class FirebaseChatService {
         this._platformUsers$.next([]);
       }
     }
+    finally{
+      // this.syncReceipt();
+      // console.log("this finally block called")
+    }
+  }
+
+  setupPresence() {
+    if (!this.senderId) return;
+
+    const connectedRef = ref(this.db, '.info/connected');
+    const userStatusRef = ref(this.db, `/presence/${this.senderId}`);
+
+    onValue(connectedRef, (snap) => {
+      const isConnected = snap.val();
+      if (isConnected === false) {
+        return;
+      }
+
+      // 📝 This acts like "onConnect"
+      // First, register the onDisconnect hook with the server
+      onDisconnect(userStatusRef)
+        .set({
+          isOnline: false,
+          last_changed: Date.now(),
+        })
+        .then(() => {
+          // 👇 Then mark the user online
+          set(userStatusRef, {
+            isOnline: true,
+            last_changed: Date.now(),
+          });
+        });
+    });
+  }
+
+  /**
+   * Subscribes to one or multiple users' online presence.
+   * Returns a cleanup function to stop all listeners.
+   */
+  isReceiverOnline(memberIds: string | string[]): () => void {
+    const ids = Array.isArray(memberIds)
+      ? memberIds.filter(Boolean)
+      : [memberIds].filter(Boolean);
+
+    if (!ids.length) return () => {};
+
+    // Ensure tracking maps exist
+    this._memberUnsubs ??= new Map<string, () => void>();
+    this.membersPresence ??= new Map<
+      string,
+      { isOnline: boolean; lastSeen: number | null }
+    >();
+
+    // 🧹 Remove listeners for users no longer in the list
+    for (const [existingId, unsub] of this._memberUnsubs.entries()) {
+      if (!ids.includes(existingId)) {
+        try {
+          unsub?.();
+        } catch {}
+        this._memberUnsubs.delete(existingId);
+        this.membersPresence.delete(existingId);
+      }
+    }
+
+    // 🧠 Add listeners for new users
+    for (const id of ids) {
+      if (this._memberUnsubs.has(id)) continue; // already listening
+
+      this.membersPresence.set(id, { isOnline: false, lastSeen: null });
+      const userStatusRef = ref(this.db, `presence/${id}`);
+
+      const unsubscribe = onValue(userStatusRef, (snap) => {
+        const val = snap.val() ?? {};
+        const isOnline = !!val.isOnline;
+
+        // Support different timestamp keys
+        const ts =
+          val.lastSeen ??
+          val.last_changed ??
+          val.last_changed_at ??
+          val.timestamp;
+        const lastSeen =
+          typeof ts === 'number' ? ts : ts ? Number(ts) || null : null;
+
+        this.membersPresence.set(id, { isOnline, lastSeen });
+        console.log(this.membersPresence);
+        // Optionally trigger an observable update:
+        // this.membersPresenceSubject?.next(this.membersPresence);
+      });
+
+      this._memberUnsubs.set(id, unsubscribe);
+    }
+
+    // 🧩 Return cleanup function
+    return () => {
+      for (const [id, unsub] of this._memberUnsubs.entries()) {
+        try {
+          unsub?.();
+        } catch {}
+      }
+      this._memberUnsubs.clear();
+      this.membersPresence.clear();
+    };
+  }
+
+  async updateMessageStatusFromReceipts(msg: IMessage) {
+    if (!msg.receipts || !this.currentChat?.members) return;
+
+    const members = this.currentChat.members;
+    const sender = this.senderId!;
+    const others = members.filter((m) => m !== sender);
+
+    const deliveredTo =
+      msg.receipts.delivered?.deliveredTo?.map((d) => d.userId) || [];
+    const readBy = msg.receipts.read?.readBy?.map((r) => r.userId) || [];
+
+    let newStatus: IMessage['status'] | null = null;
+
+    if (others.every((id) => readBy.includes(id))) {
+      newStatus = 'read';
+    } else if (others.every((id) => deliveredTo.includes(id))) {
+      newStatus = 'delivered';
+    }
+
+    if (newStatus && msg.status !== newStatus) {
+      const msgRef = ref(this.db, `chats/${msg.roomId}/${msg.msgId}`);
+      await rtdbUpdate(msgRef, { status: newStatus });
+    }
+  }
+
+  async updateMessageLocally(msg: IMessage) {
+    const messagesMap = new Map(this._messages$.value);
+    const list = messagesMap.get(msg.roomId) || [];
+    const index = list.findIndex((m) => m.msgId === msg.msgId);
+    const decryptedText = await this.encryptionService.decrypt(
+      msg.text as string
+    );
+    if (index >= 0) {
+      list[index] = {
+        ...msg,
+        text: decryptedText,
+        isMe: msg.sender === this.senderId,
+      };
+    } else {
+      list.push({
+        ...msg,
+        text: decryptedText,
+        isMe: msg.sender === this.senderId,
+      });
+    }
+    messagesMap.set(msg.roomId, list);
+    this._messages$.next(messagesMap);
+    console.warn('UI updated');
+  }
+
+  async markAsRead(msgId: string , roomId : string | null = null) {
+    try {
+      if (!this.senderId || !msgId) return;
+
+      const messagePath = ref(
+        this.db,
+        `chats/${roomId || this.currentChat?.roomId}/${msgId}/receipts/read`
+      );
+      const now = Date.now();
+      const snapshot = await get(messagePath);
+      if (!snapshot.exists()) return;
+      const readReceipt = snapshot.val();
+      const alreadyRead = readReceipt.readBy?.some(
+        (r: any) => r.userId === this.senderId
+      );
+      if (alreadyRead) return;
+      const updatedReceipts = {
+        status: true,
+        readBy: [
+          ...(readReceipt.readBy || []),
+          {
+            userId: this.senderId,
+            timestamp: now,
+          },
+        ],
+      };
+
+      await rtdbUpdate(messagePath, { ...updatedReceipts });
+    } catch (error) {
+      console.error('markAsRead error:', error);
+    }
+  }
+  async markAsDelivered(msgId: string,userID : string | null = null, roomId: string | null = null) {
+    try {
+      if (!msgId) {
+        console.log({  roomId: this.currentChat?.roomId });
+        return;
+      }
+      const userId = userID || this.senderId
+      const messagePath = ref(
+        this.db,
+        `chats/${roomId || this.currentChat?.roomId}/${msgId}/receipts/delivered`
+      );
+      const now = Date.now();
+      const snapshot = await get(messagePath);
+      if (!snapshot.exists()) return;
+
+      const deliveredReceipt = snapshot.val();
+      const alreadyDelivered = deliveredReceipt?.deliveredTo?.some(
+        (d: any) => d.userId === userId
+      );
+
+      if (alreadyDelivered) return;
+      const updatedReceipts = {
+        status: true,
+        deliveredTo: [
+          ...(deliveredReceipt.deliveredTo || []),
+          {
+            userId,
+            timestamp: now,
+          },
+        ],
+      };
+      await rtdbUpdate(messagePath, { ...updatedReceipts });
+      console.log('mark delivered!');
+    } catch (error) {
+      console.error('markAsDelivered error:', error);
+    }
+  }
+
+  async setQuickReaction({msgId,userId,emoji}:{msgId : string,userId : string, emoji : string | null}){
+    const messageRef = rtdbRef(this.db, `chats/${this.currentChat?.roomId}/${msgId}/reactions`)
+    const snap =await rtdbGet(messageRef)
+    const reactions = (snap.val() || []) as IMessage["reactions"]
+    const idx = reactions.findIndex(r=> r.userId == userId)
+    if(idx>-1){
+      reactions[idx] = {...reactions[idx],emoji}
+    }else{
+      reactions.push({userId, emoji})
+    }
+    rtdbSet(messageRef,reactions)
+    // rtdbUpdate(messageRef,reactions)
   }
 
   async loadConversations() {
@@ -330,10 +624,7 @@ export class FirebaseChatService {
       lastMessageAt: meta?.lastmessageAt
         ? new Date(Number(meta.lastmessageAt))
         : undefined,
-      unreadCount:
-        typeof meta?.unreadCount === 'number'
-          ? meta.unreadCount
-          : Number(meta?.unreadCount) || 0,
+      unreadCount: meta.unreadCount,
       updatedAt: meta?.lastmessageAt
         ? new Date(Number(meta.lastmessageAt))
         : undefined,
@@ -465,6 +756,7 @@ export class FirebaseChatService {
         for (const [roomId, meta] of Object.entries(updatedData)) {
           const idx = current.findIndex((c) => c.roomId === roomId);
           const chatMeta: IChatMeta = { ...meta, roomId };
+          console.log('chat changed', chatMeta);
           try {
             if (idx > -1) {
               const decryptedText = await this.encryptionService.decrypt(
@@ -479,10 +771,8 @@ export class FirebaseChatService {
                 lastMessageAt: chatMeta.lastmessageAt
                   ? new Date(Number((meta as any).lastmessageAt))
                   : conv.lastMessageAt,
-                unreadCount:
-                  typeof chatMeta.unreadCount === 'number'
-                    ? (meta as any).unreadcount
-                    : Number(chatMeta.unreadCount) || 0,
+                unreadCount: Number(chatMeta.unreadCount || 0),
+                isArchived: chatMeta.isArchived,
                 updatedAt: chatMeta.lastmessageAt
                   ? new Date(Number(chatMeta.lastmessageAt))
                   : conv.updatedAt,
@@ -539,7 +829,7 @@ export class FirebaseChatService {
             console.error('onUserChatsChange inner error for', roomId, e);
           }
         }
-
+        this.syncReceipt(current.filter(c => (c.unreadCount || 0)>0).map(c=>({roomId : c.roomId, unreadCount: c.unreadCount as number})))
         this._conversations$.next(current);
       };
 
@@ -553,6 +843,43 @@ export class FirebaseChatService {
       console.error('syncConversationWithServer error:', error);
     } finally {
       this._isSyncing$.next(false);
+    }
+  }
+
+  async syncReceipt(convs : {roomId : string, unreadCount : number}[]){
+    try {
+      console.log("before",this._conversations$.value)
+      if(!convs.length) return;
+      console.log("after")
+      for(const conv of convs){
+        const messagesSnap = await this.getMessagesSnap(
+          conv.roomId,
+          conv.unreadCount as number
+        );
+        console.log({messagesSnap})
+        
+        const messagesObj = messagesSnap.exists() ? messagesSnap.val() : {};
+        const messages = Object.keys(messagesObj)
+        .map((k) => ({
+          ...messagesObj[k],
+          msgId: k,
+          timestamp: messagesObj[k].timestamp ?? 0,
+        }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+        
+        for (const m of messages) {
+          
+          if (m.msgId)
+            console.log("message object is called")
+          await this.markAsDelivered(
+            m.msgId,
+            null,
+            conv.roomId as string
+          );
+        }
+      }
+    } catch (error) {
+      console.error("something went wrong", error)
     }
   }
 
@@ -722,6 +1049,22 @@ export class FirebaseChatService {
     } catch (error) {
       console.error('syncMessagesWithServer error:', error);
     }
+  }
+
+  fetchOnce = async (path: string) => {
+    // or use your existing db instance if stored in this.db
+    const snapshot = await get(ref(this.db, path));
+    return snapshot.exists() ? snapshot.val() : null;
+  };
+
+  async getMessagesSnap(roomId: string, limit: number) {
+    return await get(
+      query(
+        ref(this.db, `chats/${roomId}`),
+        orderByChild('timestamp'),
+        limitToLast(limit)
+      )
+    );
   }
 
   getMessages(): Observable<IMessage[] | undefined> {
@@ -1230,6 +1573,21 @@ export class FirebaseChatService {
       const encryptedText = await this.encryptionService.encrypt(
         msg.text as string
       );
+      const messageToSave = {
+        ...message,
+        status: 'sent',
+        roomId,
+        receipts: {
+          read: {
+            status: false,
+            readBy: [],
+          },
+          delivered: {
+            status: false,
+            deliveredTo: [],
+          },
+        },
+      };
       const meta: Partial<IChatMeta> = {
         type: this.currentChat?.type || 'private',
         lastmessageAt: message.timestamp as string,
@@ -1246,37 +1604,46 @@ export class FirebaseChatService {
             isArhived: false,
             isPinned: false,
             isLocked: false,
+            unreadCount: member==this.senderId ? 0 : 1,
           });
         } else {
-          await rtdbUpdate(ref, { ...meta });
+          await rtdbUpdate(ref, {
+            ...meta,
+           ...(member!==this.senderId && { unreadCount: (idxSnap.val().unreadCount || 0) + 1})
+          });
         }
       }
 
       const messagesRef = ref(this.db, `chats/${roomId}/${message.msgId}`);
       await rtdbSet(messagesRef, {
-        ...message,
-        roomId,
+        ...messageToSave,
         text: encryptedText,
-        ...(attachment && {
-          attachment: { ...attachment, caption: encryptedText },
-        }),
       });
 
+      for (const member of members) {
+        if (member === this.senderId) continue;
+        const isReceiverOnline = !!this.membersPresence.get(member)?.isOnline;
+        if (isReceiverOnline) {
+          this.markAsDelivered(message.msgId as string, member);
+          console.log('mark delivered clicked');
+        }
+      }
       if (attachment) {
         this.sqliteService.saveAttachment(attachment);
         this.sqliteService.saveMessage({
-          ...message,
-          roomId,
+          ...messageToSave,
           isMe: true,
         } as IMessage);
       } else {
         this.sqliteService.saveMessage({
-          ...message,
-          roomId,
+          ...messageToSave,
           isMe: true,
         } as IMessage);
       }
-      this.pushMsgToChat({ ...message, isMe: true });
+      this.pushMsgToChat({
+        ...messageToSave,
+        isMe: true,
+      });
     } catch (error) {
       console.error('Error in sending message', error);
     }
@@ -1836,9 +2203,26 @@ export class FirebaseChatService {
   // ===== DELETIONS =====
   // Message / Chat / Group deletions (soft/hard)
   // =====================
-  deleteMessage(roomId: string, messageKey: string) {
-    const messageRef = ref(this.db, `chats/${roomId}/${messageKey}`);
-    update(messageRef, { isDeleted: true });
+
+  //this function is new
+  async deleteMessage(msgId: string, forEveryone: boolean = true) {
+    // console.log("this deleted function called")
+    const messageRef = rtdbRef(
+      this.db,
+      `chats/${this.currentChat?.roomId}/${msgId}`
+    );
+    const prev = await rtdbGet(messageRef);
+    const prevMsg = prev.val();
+    if (forEveryone) {
+      await update(messageRef, { deletedFor: { everyone: true } });
+    } else {
+      await update(messageRef, {
+        deletedFor: {
+          everyone: !!prevMsg.deletedFor?.everyone,
+          users: [...(prevMsg.deletedFor?.users || []), this.senderId],
+        },
+      });
+    }
   }
 
   async deleteMessageForMe(

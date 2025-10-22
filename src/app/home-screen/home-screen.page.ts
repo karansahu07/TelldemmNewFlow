@@ -148,6 +148,7 @@ export class HomeScreenPage implements OnInit, OnDestroy {
         this.conversations = convs
           .map((c) => ({
             ...c,
+            // unreadCount : c.unreadCount || 0,
             isTyping: false,
             isSelected: false,
             lastMessage: c.lastMessage ?? 'hello this is last message', // use actual lastMessage if available
@@ -155,6 +156,7 @@ export class HomeScreenPage implements OnInit, OnDestroy {
           .filter((c) => !c.isLocked && !c.isArchived);
 
         console.log('Conversations updated:', convs);
+        console.log('this.conversations:', this.conversations);
       });
       this.isLoading = false;
       console.info('Loading home page complete!');
@@ -404,6 +406,7 @@ export class HomeScreenPage implements OnInit, OnDestroy {
   // ✅ Fix: Click handler with proper selection toggle
   onChatRowClick(chat: any, ev: Event) {
     if (this.selectedChats.length > 0) {
+      console.log('this selectedChats', this.selectedChats);
       // In selection mode: toggle selection
       this.toggleChatSelection(chat, ev);
       return;
@@ -1145,25 +1148,61 @@ export class HomeScreenPage implements OnInit, OnDestroy {
   }
 
   async markRoomAsRead() {
+    console.log("message object is called 1")
     const me = this.senderUserId || this.authService.authData?.userId || '';
     if (!me) return;
 
-    // build roomIds from current selection (ignore communities)
-    const roomIds = (this.selectedChats || [])
+    const selected = this.selectedChats || [];
+    const roomIds = selected
       .filter((c) => !c.isCommunity)
       .map((c) =>
-        c.group
-          ? String(c.receiver_Id)
-          : this.getRoomId(String(me), String(c.receiver_Id))
+        c.roomId
       );
 
-    await this.firebaseChatService.markManyRoomsAsRead(roomIds, String(me));
-
     // optimistic UI
-    (this.selectedChats || []).forEach((c) => {
+    selected.forEach((c) => {
       c.unreadCount = 0;
       c.unread = false;
     });
+    console.log("message object is called 2", roomIds)
+    
+    for (const roomId of roomIds) {
+      try {
+        const metaPath = `userchats/${me}/${roomId}`;
+        const meta = await this.firebaseChatService.fetchOnce(metaPath);
+        console.log("message object is called 3")
+        
+        const unreadCount = Number((meta && meta.unreadCount) || 0);
+        if (!unreadCount) continue;
+        
+        const messagesSnap = await this.firebaseChatService.getMessagesSnap(
+          roomId,
+          unreadCount
+        );
+        
+        const messagesObj = messagesSnap.exists() ? messagesSnap.val() : {};
+        const messages = Object.keys(messagesObj)
+        .map((k) => ({
+          ...messagesObj[k],
+          msgId: k,
+          timestamp: messagesObj[k].timestamp ?? 0,
+        }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+        
+        for (const m of messages) {
+          
+          if (m.msgId)
+            console.log("message object is called")
+          await this.firebaseChatService.markAsRead(
+            m.msgId,
+            roomId as string
+          );
+        }
+        this.firebaseChatService.setUnreadCount(roomId);
+      } catch (err) {
+        console.error(`Error processing room ${roomId}`, err);
+      }
+    }
     this.clearChatSelection();
   }
 
@@ -1176,27 +1215,15 @@ export class HomeScreenPage implements OnInit, OnDestroy {
       .filter((c) => !c.isCommunity)
       .map(
         (c) =>
-          c.group
-            ? String(c.receiver_Id) // group roomId is the groupId
-            : this.getRoomId(String(me), String(c.receiver_Id)) // private roomId a_b
+          c.roomId
       );
 
     if (roomIds.length === 0) return;
 
-    // Mark in RTDB (centralized)
-    await this.firebaseChatService.markManyRoomsAsUnread(
-      roomIds,
-      String(me),
-      1
-    );
+    for (const roomId of roomIds){
+      await this.firebaseChatService.setUnreadCount(roomId, 1);
+    }
 
-    // Optimistic UI: show badge >= 1 on selected chats
-    (this.selectedChats || []).forEach((c) => {
-      c.unread = true;
-      c.unreadCount = Math.max(Number(c.unreadCount || 0), 1);
-    });
-
-    // optional: keep selection or clear it
     this.clearChatSelection();
   }
 
@@ -1310,6 +1337,45 @@ export class HomeScreenPage implements OnInit, OnDestroy {
     this.versionService.checkAndNotify();
   }
 
+private mediaPreviewLabels: Record<string, string> = {
+  image: '📷 Photo',
+  video: '🎥 Video',
+  audio: '🎵 Audio',
+  file: '📎 Attachment',
+  document: '📎 Document',
+  contact: '👤 Contact',
+  location: '📍 Location',
+};
+
+private truncatePreview(text: string | undefined | null, max = 60): string {
+  if (!text) return '';
+  const s = String(text).trim();
+  return s.length <= max ? s : s.slice(0, max - 1) + '…';
+}
+
+getPreviewText(chat: any): string {
+  try {
+    const type = (chat?.lastMessageType || '').toString().toLowerCase();
+
+    if (type && this.mediaPreviewLabels[type]) {
+      return this.mediaPreviewLabels[type];
+    }
+    const lm = chat?.lastMessage;
+    if (lm && typeof lm === 'string') {
+      if (/^(https?:\/\/)|mediaId|data:image\/|^\/?uploads\//i.test(lm)) {
+        // assume image/file generic
+        return this.mediaPreviewLabels['file'];
+      }
+    }
+    const text = lm ?? '';
+    return this.truncatePreview(text);
+  } catch (err) {
+    console.warn('getPreviewText error', err);
+    return '';
+  }
+}
+
+
   formatTimestamp(timestamp: string): string {
     const date = new Date(timestamp);
     const now = new Date();
@@ -1409,11 +1475,11 @@ export class HomeScreenPage implements OnInit, OnDestroy {
     // console.log({filtered})
 
     if (this.selectedFilter === 'read') {
-      filtered = filtered.filter((chat) => !chat.unread && !chat.group);
+      filtered = filtered.filter((chat) => chat.unreadCount === 0);
     } else if (this.selectedFilter === 'unread') {
-      filtered = filtered.filter((chat) => chat.unread && !chat.group);
+      filtered = filtered.filter((chat) => chat.unreadCount > 0);
     } else if (this.selectedFilter === 'groups') {
-      filtered = filtered.filter((chat) => chat.group);
+      filtered = filtered.filter((chat) => chat.type === 'group');
     }
 
     if (this.searchText.trim() !== '') {

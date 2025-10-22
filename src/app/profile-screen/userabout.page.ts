@@ -14,6 +14,7 @@ import { ApiService } from '../services/api/api.service';
 import { push } from 'firebase/database';
 import { query, limitToLast, onValue } from "firebase/database";
 import { TranslateModule, TranslateService } from '@ngx-translate/core';
+import { IGroup, IGroupMember } from '../services/sqlite.service';
 // removed unused firstValueFrom import
 // import { firstValueFrom } from 'rxjs';
 
@@ -42,6 +43,9 @@ export class UseraboutPage implements OnInit {
     phone_number?: string;
     publicKeyHex?: string | null;
   }[] = [];
+
+  groupData: IGroup | null = null;
+groupMemberssda: { userId: string; data: IGroupMember; avatar?: string }[] = [];    //new type of groupMember
   commonGroups: any[] = [];
   receiverAbout: string = '';
   statusTime: string = '';
@@ -124,7 +128,7 @@ socialMediaLinks: { platform: string; profile_url: string }[] = [];
     // this.checkIfBlocked();
   }
 
-  ionViewWillEnter() {
+  async ionViewWillEnter() {
     // this.route.queryParams.subscribe(async params => {
     //   this.receiverId = params['receiverId'] || '';
     //   this.receiver_phone = params['receiver_phone'] || '';
@@ -139,34 +143,46 @@ socialMediaLinks: { platform: string; profile_url: string }[] = [];
       
     //   this.communityId = this.route.snapshot.queryParamMap.get('communityId') || '';
       
-    //   if (this.chatType === 'group') {
-    //     try {
-    //       const { groupName, groupMembers } = await this.firebaseChatService.fetchGroupWithProfiles(this.receiverId);
-    //       this.groupName = groupName;
-    //       this.groupMembers = groupMembers;
-    //     } catch (err) {
-    //       console.warn('Failed to fetch group with profiles', err);
-    //       this.groupName = 'Group';
-    //       this.groupMembers = [];
-    //     }
-        
-    //     await this.fetchGroupMeta(this.receiverId);
-    //   } else {
-    //     // await this.fetchReceiverAbout(this.receiverId);
-    //   }
     // });
     
-            const currentChat = this.firebaseChatService.currentChat;
-      this.receiverProfile = (currentChat as any).avatar || (currentChat as any).groupAvatar || null;
-      this.chatTitle = currentChat?.title || null;
     
-      // console.log("this chattitle",this.chatTitle)
+    this.route.queryParams.subscribe(params => {
+      this.receiverId = params['receiverId'] || null;
+      const isGroupParam = params['isGroup'];
+      this.chatType = isGroupParam === 'true' ? 'group' : 'private';
+      console.log("this chatType", this.chatType)
+      console.log('Receiver ID:', this.receiverId);
+    });
+    
+    this.loadReceiverProfile();
+    
+    const currentChat = this.firebaseChatService.currentChat;
+    this.receiverProfile = (currentChat as any).avatar || (currentChat as any).groupAvatar || null;
+    this.chatTitle = currentChat?.title || null;
+    
+    if (this.chatType === 'group') {
+      try {
+        const { groupName, groupMembers } = await this.firebaseChatService.fetchGroupWithProfiles(this.receiverId);
+        this.groupName = groupName;
+        this.groupMembers = groupMembers;
+      } catch (err) {
+        console.warn('Failed to fetch group with profiles', err);
+        this.groupName = 'Group';
+        this.groupMembers = [];
+      }
+      
+      await this.fetchGroupMeta(this.receiverId);
+    } else {
+      // await this.fetchReceiverAbout(this.receiverId);
+    }
+    
+    // console.log("this chattitle",this.chatTitle)
     
     // this.checkForPastMembers();
     // this.findCommonGroups(this.currentUserId, this.receiverId);
   }
-
-
+  
+  
   loadReceiverProfile() {
   if (!this.receiverId) return;
 
@@ -189,6 +205,7 @@ socialMediaLinks: { platform: string; profile_url: string }[] = [];
         this.statusTime = res?.dp_status_updated_on;
 
         // 👇 call social media links here
+        console.log("this.receiverId", this.receiverId)
         this.loadReceiverSocialMedia(this.receiverId);
       },
       error: (err) => {

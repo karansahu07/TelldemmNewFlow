@@ -17,7 +17,7 @@ export interface IUser {
   phoneNumber: string;
   lastSeen?: Date;
   avatar?: string;
-  status?: string;
+  status?: string;   //mapping of status
   isOnPlatform?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
@@ -28,6 +28,9 @@ export interface IMessage {
   roomId: string;
   sender: string;
   type: 'text' | 'image' | 'audio' | 'video' | 'pdf' | 'other';
+  // isTranslated : boolean;   // use in future
+  // translatedIn : string;
+  //translatedText : string;
   text?: string;
   localUrl?: string;
   cdnUrl?: string;
@@ -39,9 +42,10 @@ export interface IMessage {
     everyone: boolean;
     users: [];
   };
-  reactions: { userId: string; emoji: string }[];
+  reactions: { userId: string; emoji: string | null }[];
   replyToMsgId: string;
   isEdit: boolean;
+  isForwarded?: boolean;
   receipts?: {
     read: {
       status: boolean;

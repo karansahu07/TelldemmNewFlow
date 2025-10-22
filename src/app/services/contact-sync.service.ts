@@ -77,7 +77,8 @@ export class ContactSyncService {
                     userId: user.user_id,
                     avatar: user.profile_picture_url,
                     username: nameNumberMap.get(userLast10) as string,
-                    isOnPlatform: true
+                    isOnPlatform: true,
+                    
                   } as IUser
                 }
               }
