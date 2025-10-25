@@ -101,7 +101,7 @@ export class FirebaseChatService {
     private networkService: NetworkService,
     private encryptionService: EncryptionService,
     private authService: AuthService
-  ) {}
+  ) { }
 
   private isWeb(): boolean {
     return (
@@ -209,11 +209,11 @@ export class FirebaseChatService {
       },
     });
 
-   this.setUnreadCount();
+    this.setUnreadCount();
   }
 
-   async setUnreadCount(roomId : string | null = null, count : number = 0){
-     const metaRef = rtdbRef(
+  async setUnreadCount(roomId: string | null = null, count: number = 0) {
+    const metaRef = rtdbRef(
       this.db,
       `userchats/${this.senderId}/${roomId || this.currentChat?.roomId}`
     );
@@ -225,13 +225,13 @@ export class FirebaseChatService {
       if (this._roomMessageListner) {
         try {
           this._roomMessageListner();
-        } catch (error) {}
+        } catch (error) { }
         this._roomMessageListner = null;
       }
       if (this.presenceCleanUp) {
         try {
           this.presenceCleanUp();
-        } catch (error) {}
+        } catch (error) { }
         this.presenceCleanUp = null;
       }
       this.currentChat = null;
@@ -268,7 +268,7 @@ export class FirebaseChatService {
       }
 
       const pfUsers = await this.contactsyncService.getMatchedUsers();
-      console.log({pfUsers})
+      console.log({ pfUsers })
       await this.sqliteService.upsertContacts(pfUsers);
       this._deviceContacts$.next([...normalizedContacts]);
       this._platformUsers$.next([...pfUsers]);
@@ -293,7 +293,7 @@ export class FirebaseChatService {
         this._platformUsers$.next([]);
       }
     }
-    finally{
+    finally {
       // this.syncReceipt();
       // console.log("this finally block called")
     }
@@ -337,7 +337,7 @@ export class FirebaseChatService {
       ? memberIds.filter(Boolean)
       : [memberIds].filter(Boolean);
 
-    if (!ids.length) return () => {};
+    if (!ids.length) return () => { };
 
     // Ensure tracking maps exist
     this._memberUnsubs ??= new Map<string, () => void>();
@@ -351,7 +351,7 @@ export class FirebaseChatService {
       if (!ids.includes(existingId)) {
         try {
           unsub?.();
-        } catch {}
+        } catch { }
         this._memberUnsubs.delete(existingId);
         this.membersPresence.delete(existingId);
       }
@@ -391,7 +391,7 @@ export class FirebaseChatService {
       for (const [id, unsub] of this._memberUnsubs.entries()) {
         try {
           unsub?.();
-        } catch {}
+        } catch { }
       }
       this._memberUnsubs.clear();
       this.membersPresence.clear();
@@ -448,7 +448,7 @@ export class FirebaseChatService {
     console.warn('UI updated');
   }
 
-  async markAsRead(msgId: string , roomId : string | null = null) {
+  async markAsRead(msgId: string, roomId: string | null = null) {
     try {
       if (!this.senderId || !msgId) return;
 
@@ -480,10 +480,10 @@ export class FirebaseChatService {
       console.error('markAsRead error:', error);
     }
   }
-  async markAsDelivered(msgId: string,userID : string | null = null, roomId: string | null = null) {
+  async markAsDelivered(msgId: string, userID: string | null = null, roomId: string | null = null) {
     try {
       if (!msgId) {
-        console.log({  roomId: this.currentChat?.roomId });
+        console.log({ roomId: this.currentChat?.roomId });
         return;
       }
       const userId = userID || this.senderId
@@ -518,17 +518,17 @@ export class FirebaseChatService {
     }
   }
 
-  async setQuickReaction({msgId,userId,emoji}:{msgId : string,userId : string, emoji : string | null}){
+  async setQuickReaction({ msgId, userId, emoji }: { msgId: string, userId: string, emoji: string | null }) {
     const messageRef = rtdbRef(this.db, `chats/${this.currentChat?.roomId}/${msgId}/reactions`)
-    const snap =await rtdbGet(messageRef)
+    const snap = await rtdbGet(messageRef)
     const reactions = (snap.val() || []) as IMessage["reactions"]
-    const idx = reactions.findIndex(r=> r.userId == userId)
-    if(idx>-1){
-      reactions[idx] = {...reactions[idx],emoji}
-    }else{
-      reactions.push({userId, emoji})
+    const idx = reactions.findIndex(r => r.userId == userId)
+    if (idx > -1) {
+      reactions[idx] = { ...reactions[idx], emoji }
+    } else {
+      reactions.push({ userId, emoji })
     }
-    rtdbSet(messageRef,reactions)
+    rtdbSet(messageRef, reactions)
     // rtdbUpdate(messageRef,reactions)
   }
 
@@ -651,7 +651,7 @@ export class FirebaseChatService {
     const groupSnap = await rtdbGet(groupRef);
     const group: Partial<IGroup> = groupSnap.val() || {};
     const membersObj: Record<string, Partial<IGroupMember>> = group.members ||
-    {};
+      {};
     const members = Object.keys(membersObj);
 
     let decryptedText: string | undefined;
@@ -683,8 +683,8 @@ export class FirebaseChatService {
       updatedAt: meta.lastmessageAt
         ? this.parseDate(meta.lastmessageAt)
         : group.updatedAt
-        ? this.parseDate(group.updatedAt)
-        : undefined,
+          ? this.parseDate(group.updatedAt)
+          : undefined,
     } as IConversation;
 
     return conv;
@@ -747,7 +747,7 @@ export class FirebaseChatService {
       if (this._userChatsListener) {
         try {
           this._userChatsListener();
-        } catch {}
+        } catch { }
         this._userChatsListener = null;
       }
       const onUserChatsChange = async (snap: DataSnapshot) => {
@@ -829,7 +829,7 @@ export class FirebaseChatService {
             console.error('onUserChatsChange inner error for', roomId, e);
           }
         }
-        this.syncReceipt(current.filter(c => (c.unreadCount || 0)>0).map(c=>({roomId : c.roomId, unreadCount: c.unreadCount as number})))
+        this.syncReceipt(current.filter(c => (c.unreadCount || 0) > 0).map(c => ({ roomId: c.roomId, unreadCount: c.unreadCount as number })))
         this._conversations$.next(current);
       };
 
@@ -837,7 +837,7 @@ export class FirebaseChatService {
       this._userChatsListener = () => {
         try {
           unsubscribe();
-        } catch {}
+        } catch { }
       };
     } catch (error) {
       console.error('syncConversationWithServer error:', error);
@@ -846,29 +846,29 @@ export class FirebaseChatService {
     }
   }
 
-  async syncReceipt(convs : {roomId : string, unreadCount : number}[]){
+  async syncReceipt(convs: { roomId: string, unreadCount: number }[]) {
     try {
-      console.log("before",this._conversations$.value)
-      if(!convs.length) return;
+      console.log("before", this._conversations$.value)
+      if (!convs.length) return;
       console.log("after")
-      for(const conv of convs){
+      for (const conv of convs) {
         const messagesSnap = await this.getMessagesSnap(
           conv.roomId,
           conv.unreadCount as number
         );
-        console.log({messagesSnap})
-        
+        console.log({ messagesSnap })
+
         const messagesObj = messagesSnap.exists() ? messagesSnap.val() : {};
         const messages = Object.keys(messagesObj)
-        .map((k) => ({
-          ...messagesObj[k],
-          msgId: k,
-          timestamp: messagesObj[k].timestamp ?? 0,
-        }))
-        .sort((a, b) => a.timestamp - b.timestamp);
-        
+          .map((k) => ({
+            ...messagesObj[k],
+            msgId: k,
+            timestamp: messagesObj[k].timestamp ?? 0,
+          }))
+          .sort((a, b) => a.timestamp - b.timestamp);
+
         for (const m of messages) {
-          
+
           if (m.msgId)
             console.log("message object is called")
           await this.markAsDelivered(
@@ -897,9 +897,14 @@ export class FirebaseChatService {
 
       const snapToMsg = async (s: DataSnapshot): Promise<any> => {
         const payload = s.val() ?? {};
+        // console.log("payload",payload);
         const decryptedText = await this.encryptionService.decrypt(
           payload.text as string
         );
+          const decryptedtranslatedText = await this.encryptionService.decrypt(
+          payload.translatedText as string
+        );
+
         let cdnUrl = '';
         if (payload.attachment) {
           const res = await firstValueFrom(
@@ -912,6 +917,7 @@ export class FirebaseChatService {
           isMe: payload.sender === this.senderId,
           ...payload,
           text: decryptedText,
+          translatedText: decryptedtranslatedText,
           ...(payload.attachment && {
             attachment: { ...payload.attachment, previewUrl: cdnUrl },
           }),
@@ -1166,8 +1172,8 @@ export class FirebaseChatService {
                 localConv?.lastMessageAt instanceof Date
                   ? localConv.lastMessageAt.getTime()
                   : typeof localConv?.lastMessageAt === 'number'
-                  ? Number(localConv.lastMessageAt)
-                  : Date.now(),
+                    ? Number(localConv.lastMessageAt)
+                    : Date.now(),
               lastmessageType:
                 (localConv?.lastMessageType as IChatMeta['lastmessageType']) ??
                 'text',
@@ -1320,8 +1326,8 @@ export class FirebaseChatService {
                 localConv?.lastMessageAt instanceof Date
                   ? localConv.lastMessageAt.getTime()
                   : typeof localConv?.lastMessageAt === 'number'
-                  ? Number(localConv?.lastMessageAt)
-                  : Date.now(),
+                    ? Number(localConv?.lastMessageAt)
+                    : Date.now(),
               lastmessageType:
                 (localConv?.lastMessageType as IChatMeta['lastmessageType']) ??
                 'text',
@@ -1405,8 +1411,8 @@ export class FirebaseChatService {
                 localConv?.lastMessageAt instanceof Date
                   ? localConv.lastMessageAt.getTime()
                   : typeof localConv?.lastMessageAt === 'number'
-                  ? Number(localConv.lastMessageAt)
-                  : Date.now(),
+                    ? Number(localConv.lastMessageAt)
+                    : Date.now(),
               lastmessageType:
                 (localConv?.lastMessageType as IChatMeta['lastmessageType']) ??
                 'text',
@@ -1519,7 +1525,7 @@ export class FirebaseChatService {
       return () => {
         try {
           off();
-        } catch (e) {}
+        } catch (e) { }
       };
     });
   }
@@ -1549,7 +1555,7 @@ export class FirebaseChatService {
       return () => {
         try {
           off();
-        } catch (e) {}
+        } catch (e) { }
       };
     });
   }
@@ -1566,12 +1572,32 @@ export class FirebaseChatService {
   // =====================
 
   async sendMessage(msg: Partial<IMessage & { attachment: IAttachment }>) {
+    console.log("khusha testing", msg);
+    //     {
+    //     "msgId": "2ad4fa3a-6d41-4c7a-a65d-b3bb013dcf8b",
+    //     "roomId": "",
+    //     "sender": "52",
+    //     "type": "text",
+    //     "text": "hello",
+    //     "timestamp": 1761241393597,
+    //     "replyToMsgId": "",
+    //     "isEdit": false,
+    //     "reactions": [],
+    //     "isTranslated": true,
+    //     "translatedIn": "Hindi",
+    //     "translatedText": "नमस्ते",
+    //     "status": "pending"
+    // }
+    //will tomorrow save data accrdoing to this struecutr in db
     try {
       const { attachment, ...message } = msg;
       const roomId = this.currentChat?.roomId as string;
       const members = this.currentChat?.members || roomId.split('_');
       const encryptedText = await this.encryptionService.encrypt(
         msg.text as string
+      );
+      const encryptedTranslatedText = await this.encryptionService.encrypt(
+        msg.translatedText as string
       );
       const messageToSave = {
         ...message,
@@ -1592,7 +1618,11 @@ export class FirebaseChatService {
         type: this.currentChat?.type || 'private',
         lastmessageAt: message.timestamp as string,
         lastmessageType: attachment ? attachment.type : 'text',
-        lastmessage: encryptedText || '',
+        //if translated exist non empty then show acc then show acc in last message encryptedTranslatedText else encryptedText
+        // lastmessage: encryptedText || '',
+        lastmessage: msg.isTranslated ? encryptedTranslatedText : encryptedText,
+
+
       };
 
       for (const member of members) {
@@ -1604,21 +1634,29 @@ export class FirebaseChatService {
             isArhived: false,
             isPinned: false,
             isLocked: false,
-            unreadCount: member==this.senderId ? 0 : 1,
+            unreadCount: member == this.senderId ? 0 : 1,
           });
         } else {
           await rtdbUpdate(ref, {
             ...meta,
-           ...(member!==this.senderId && { unreadCount: (idxSnap.val().unreadCount || 0) + 1})
+            ...(member !== this.senderId && { unreadCount: (idxSnap.val().unreadCount || 0) + 1 })
           });
         }
       }
 
       const messagesRef = ref(this.db, `chats/${roomId}/${message.msgId}`);
+      // await rtdbSet(messagesRef, {
+      //   ...messageToSave,
+      //   text: encryptedText,
+      // });
       await rtdbSet(messagesRef, {
         ...messageToSave,
         text: encryptedText,
+        isTranslated: msg.isTranslated || false,
+        translatedIn: msg.translatedIn || '',
+        translatedText: encryptedTranslatedText || '',
       });
+
 
       for (const member of members) {
         if (member === this.senderId) continue;
@@ -1628,18 +1666,34 @@ export class FirebaseChatService {
           console.log('mark delivered clicked');
         }
       }
+
+      const messageForSQLite = {
+        ...messageToSave,
+        isMe: true,
+        isTranslated: msg.isTranslated || false,
+        translatedIn: msg.translatedIn || '',
+        translatedText: msg.translatedText || '', // decrypted or plain text version
+      };
+
       if (attachment) {
         this.sqliteService.saveAttachment(attachment);
-        this.sqliteService.saveMessage({
-          ...messageToSave,
-          isMe: true,
-        } as IMessage);
+        this.sqliteService.saveMessage(messageForSQLite as IMessage);
       } else {
-        this.sqliteService.saveMessage({
-          ...messageToSave,
-          isMe: true,
-        } as IMessage);
+        this.sqliteService.saveMessage(messageForSQLite as IMessage);
       }
+
+      // if (attachment) {
+      //   this.sqliteService.saveAttachment(attachment);
+      //   this.sqliteService.saveMessage({
+      //     ...messageToSave,
+      //     isMe: true,
+      //   } as IMessage);
+      // } else {
+      //   this.sqliteService.saveMessage({
+      //     ...messageToSave,
+      //     isMe: true,
+      //   } as IMessage);
+      // }
       this.pushMsgToChat({
         ...messageToSave,
         isMe: true,
@@ -1648,6 +1702,154 @@ export class FirebaseChatService {
       console.error('Error in sending message', error);
     }
   }
+
+  // async sendMessage(msg: Partial<IMessage & { attachment: IAttachment }>) {
+  //   try {
+  //     const { attachment, ...message } = msg;
+  //     const roomId = this.currentChat?.roomId as string;
+  //     if (!roomId) throw new Error('No roomId in currentChat');
+
+  //     const members = this.currentChat?.members || roomId.split('_');
+
+  //     // ensure msgId and timestamp exist
+  //     const msgId = (message.msgId as string) || uuidv4();
+  //     const timestamp = (message.timestamp as any) || Date.now();
+
+  //     // Plaintext values (UI/local)
+  //     const originalPlain = (msg.text || '').toString();
+  //     const translatedPlain = (msg.translatedText || '').toString();
+  //     const isTranslated = !!msg.isTranslated;
+  //     const translatedIn = msg.translatedIn || '';
+
+  //     // Encrypt original and translated (if present)
+  //     const encryptedOriginal = originalPlain
+  //       ? await this.encryptionService.encrypt(originalPlain)
+  //       : '';
+  //     const encryptedTranslated =
+  //       isTranslated && translatedPlain
+  //         ? await this.encryptionService.encrypt(translatedPlain)
+  //         : '';
+
+  //     // Prepare message object to save to remote DB (encrypted fields)
+  //     const messageToSave: Partial<IMessage> = {
+  //       ...message,
+  //       msgId,
+  //       timestamp,
+  //       status: 'sent',
+  //       roomId,
+  //       // store encrypted values in remote DB
+  //       text: encryptedOriginal,
+  //       translatedText: encryptedTranslated,
+  //       isTranslated,
+  //       translatedIn,
+  //       receipts: {
+  //         read: {
+  //           status: false,
+  //           readBy: [],
+  //         },
+  //         delivered: {
+  //           status: false,
+  //           deliveredTo: [],
+  //         },
+  //       },
+  //     };
+
+  //     // Prepare meta for userchats index.
+  //     const lastmessageEncrypted = encryptedTranslated || encryptedOriginal || '';
+  //     const meta: Partial<IChatMeta> = {
+  //       type: this.currentChat?.type || 'private',
+  //       lastmessageAt: timestamp,
+  //       lastmessageType: attachment ? attachment.type : 'text',
+  //       lastmessage: lastmessageEncrypted,
+  //     };
+
+  //     // Update per-member userchats (create or update with unreadCount)
+  //     for (const member of members) {
+  //       const uRef = rtdbRef(this.db, `userchats/${member}/${roomId}`);
+  //       const idxSnap = await rtdbGet(uRef);
+  //       if (!idxSnap.exists()) {
+  //         await rtdbSet(uRef, {
+  //           ...meta,
+  //           isArhived: false,
+  //           isPinned: false,
+  //           isLocked: false,
+  //           unreadCount: member === this.senderId ? 0 : 1,
+  //         });
+  //       } else {
+  //         await rtdbUpdate(uRef, {
+  //           ...meta,
+  //           ...(member !== this.senderId && {
+  //             unreadCount: (idxSnap.val().unreadCount || 0) + 1,
+  //           }),
+  //         });
+  //       }
+  //     }
+
+  //     // Save message to RTDB (encrypted payload)
+  //     const messagesRef = rtdbRef(this.db, `chats/${roomId}/${msgId}`);
+  //     await rtdbSet(messagesRef, {
+  //       ...messageToSave,
+  //       text: messageToSave.text || '',
+  //       translatedText: messageToSave.translatedText || '',
+  //       isTranslated: messageToSave.isTranslated || false,
+  //       translatedIn: messageToSave.translatedIn || '',
+  //     });
+
+  //     // Mark as delivered for online receivers
+  //     for (const member of members) {
+  //       if (member === this.senderId) continue;
+  //       const isReceiverOnline = !!this.membersPresence.get(member)?.isOnline;
+  //       if (isReceiverOnline) {
+  //         this.markAsDelivered(msgId, member);
+  //       }
+  //     }
+
+  //     // Save to SQLite (local copy) — use decrypted/plain values for immediate rendering
+  //     const localSaveMsg: IMessage = {
+  //       msgId,
+  //       roomId,
+  //       sender: (message.sender ?? this.senderId) as string,
+  //       type: (message.type as any) || (attachment ? attachment.type : 'text'),
+  //       text: originalPlain,
+  //       translatedText: translatedPlain,
+  //       isTranslated,
+  //       translatedIn,
+  //       localUrl: message.localUrl || '',
+  //       cdnUrl: message.cdnUrl || '',
+  //       mediaId: message.mediaId || '',
+  //       isMe: true,
+  //       status: 'sent',
+  //       timestamp,
+  //       deletedFor: message.deletedFor || { everyone: false, users: [] },
+  //       reactions: message.reactions || [],
+  //       replyToMsgId: message.replyToMsgId || '',
+  //       isEdit: !!message.isEdit,
+  //       isForwarded: !!message.isForwarded,
+  //       receipts: message.receipts || {
+  //         read: { status: false, readBy: [] },
+  //         delivered: { status: false, deliveredTo: [] },
+  //       },
+  //     };
+
+  //     if (attachment) {
+  //       // persist attachment locally
+  //       this.sqliteService.saveAttachment(attachment);
+  //       localSaveMsg.mediaId = attachment.mediaId || localSaveMsg.mediaId;
+  //     }
+
+  //     // Save readable message locally
+  //     this.sqliteService.saveMessage(localSaveMsg);
+
+  //     // push message into in-memory chat for immediate UI render (use decrypted values)
+  //     this.pushMsgToChat({
+  //       ...localSaveMsg,
+  //       isMe: true,
+  //     } as IMessage);
+  //   } catch (error) {
+  //     console.error('Error in sending message', error);
+  //   }
+  // }
+
 
   // Pinned message operations
   async pinMessage(message: PinnedMessage) {
@@ -2097,7 +2299,7 @@ export class FirebaseChatService {
     if (!snap.exists()) {
       try {
         await update(rtdbRef(db, `/unreadCounts/${roomId}`), { [userId]: 0 });
-      } catch {}
+      } catch { }
       return 0;
     }
 
@@ -2134,7 +2336,7 @@ export class FirebaseChatService {
     for (const rid of roomIds) {
       try {
         total += await this.markRoomAsRead(rid, userId);
-      } catch {}
+      } catch { }
     }
     return total;
   }
@@ -2150,7 +2352,7 @@ export class FirebaseChatService {
     try {
       const snap = await get(rtdbRef(db, `unreadCounts/${roomId}/${userId}`));
       current = snap.exists() ? Number(snap.val() || 0) : 0;
-    } catch {}
+    } catch { }
 
     const updates: Record<string, any> = {};
     updates[`unreadChats/${userId}/${roomId}`] = true;
@@ -2346,3 +2548,7 @@ export class FirebaseChatService {
 
   // // async deleteChatForUser(userId: string, chat: { receiver_Id: string; group?: boolean; isCommunity?: boolean }) { ... }
 }
+function uuidv4(): string {
+  throw new Error('Function not implemented.');
+}
+

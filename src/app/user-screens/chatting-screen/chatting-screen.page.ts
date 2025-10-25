@@ -449,6 +449,11 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
       )) as any[];
       // msgs.forEach((msg: any) => console.log({msg}));
       this.allMessage = msgs as IMessage[];
+
+       // Initialize showingEnglish flag for each message
+    this.allMessage.forEach(msg => {
+      msg.showingEnglish = false; // default: not show English
+    });
       for (const msg of msgs) {
         if (!msg.isMe) {
           console.log('Marking read from chat screen');
@@ -456,6 +461,37 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
         }
       }
     });
+
+
+
+//   async ionViewWillEnter() {
+//   await this.chatService.loadMessages();
+//   this.chatService.syncMessagesWithServer();
+
+//   this.chatService.getMessages().subscribe(async (msgs: any) => {
+//     // Group messages by date
+//     this.groupedMessages = (await this.groupMessagesByDate(
+//       msgs as any[]
+//     )) as any[];
+
+//     // Save all messages
+//     this.allMessage = msgs as IMessage[];
+
+//     // Initialize showingEnglish flag for each message
+//     this.allMessage.forEach(msg => {
+//       msg.showingEnglish = true; // default: show English
+//     });
+
+//     // Mark messages as read if not sent by me
+//     for (const msg of msgs) {
+//       if (!msg.isMe) {
+//         console.log('Marking read from chat screen', msg);
+//         this.chatService.markAsRead(msg.msgId);
+//       }
+//     }
+//   });
+// }
+
 
     //scroll to bottom pagination load messages
     const scrollElement = await this.ionContent.getScrollElement();
@@ -2100,6 +2136,11 @@ if (this.chatType === 'private') {
     }
   }
 
+toggleLanguage(msg: any) {
+  msg.showingEnglish = !msg.showingEnglish;
+}
+
+
   observeVisibleMessages() {
     const allMessageElements = document.querySelectorAll('[data-msg-key]');
 
@@ -2383,75 +2424,435 @@ if (this.chatType === 'private') {
     this.replyToMessage = message;
   }
 
-  async sendMessage() {
-    if (this.isSending) return;
+  // async sendMessage() {
+  //   if (this.isSending) return;
 
-    this.isSending = true;
+  //   this.isSending = true;
 
-    try {
-      const plainText = this.messageText.trim();
-      const localMessage: Partial<IMessage & { attachment?: IAttachment }> = {
-        sender: this.senderId,
-        text: plainText,
-        timestamp: Date.now(),
-        msgId: uuidv4(),
-        replyToMsgId: this.replyTo?.message.msgId || '',
-        isEdit: false,
-        type: 'text',
-        reactions: [],
-      };
+  //   try {
+  //     const plainText = this.messageText.trim();
+  //     const localMessage: Partial<IMessage & { attachment?: IAttachment }> = {
+  //       sender: this.senderId,
+  //       text: plainText,
+  //       timestamp: Date.now(),
+  //       msgId: uuidv4(),
+  //       replyToMsgId: this.replyTo?.message.msgId || '',
+  //       isEdit: false,
+  //       type: 'text',
+  //       reactions: [],
+  //     };
 
-      if (this.selectedAttachment) {
-        try {
-          const mediaId = await this.uploadAttachmentToS3(
-            this.selectedAttachment
-          );
+  //     if (this.selectedAttachment) {
+  //       try {
+  //         const mediaId = await this.uploadAttachmentToS3(
+  //           this.selectedAttachment
+  //         );
 
-          localMessage.attachment = {
-            type: this.selectedAttachment.type,
-            mediaId: mediaId,
-            fileName: this.selectedAttachment.fileName,
-            mimeType: this.selectedAttachment.mimeType,
-            fileSize: this.selectedAttachment.fileSize,
-            caption: plainText, // send encrypted caption
-          };
+  //         localMessage.attachment = {
+  //           type: this.selectedAttachment.type,
+  //           mediaId: mediaId,
+  //           fileName: this.selectedAttachment.fileName,
+  //           mimeType: this.selectedAttachment.mimeType,
+  //           fileSize: this.selectedAttachment.fileSize,
+  //           caption: plainText, // send encrypted caption
+  //         };
 
-          const file_path = await this.FileService.saveFileToSent(
-            this.selectedAttachment.fileName,
-            this.selectedAttachment.blob
-          );
-        } catch (error) {
-          console.error('Failed to upload attachment:', error);
-          const toast = await this.toastCtrl.create({
-            message: 'Failed to upload attachment. Please try again.',
-            duration: 3000,
-            color: 'danger',
-          });
-          await toast.present();
-          return;
-        }
-      }
+  //         const file_path = await this.FileService.saveFileToSent(
+  //           this.selectedAttachment.fileName,
+  //           this.selectedAttachment.blob
+  //         );
+  //       } catch (error) {
+  //         console.error('Failed to upload attachment:', error);
+  //         const toast = await this.toastCtrl.create({
+  //           message: 'Failed to upload attachment. Please try again.',
+  //           duration: 3000,
+  //           color: 'danger',
+  //         });
+  //         await toast.present();
+  //         return;
+  //       }
+  //     }
 
-      await this.chatService.sendMessage(localMessage);
-      // clear UI state
-      this.messageText = '';
-      this.selectedAttachment = null;
-      this.showPreviewModal = false;
-      this.replyToMessage = null;
-      await this.stopTypingSignal();
-      this.scrollToBottom();
-    } catch (error) {
-      console.error('Error sending message:', error);
-      const toast = await this.toastCtrl.create({
-        message: 'Failed to send message. Please try again.',
-        duration: 3000,
-        color: 'danger',
-      });
-      await toast.present();
-    } finally {
-      this.isSending = false;
+  //     await this.chatService.sendMessage(localMessage);
+  //     // clear UI state
+  //     this.messageText = '';
+  //     this.selectedAttachment = null;
+  //     this.showPreviewModal = false;
+  //     this.replyToMessage = null;
+  //     await this.stopTypingSignal();
+  //     this.scrollToBottom();
+  //   } catch (error) {
+  //     console.error('Error sending message:', error);
+  //     const toast = await this.toastCtrl.create({
+  //       message: 'Failed to send message. Please try again.',
+  //       duration: 3000,
+  //       color: 'danger',
+  //     });
+  //     await toast.present();
+  //   } finally {
+  //     this.isSending = false;
+  //   }
+  // }
+
+async sendMessage() {
+  if (this.isSending) return;
+
+  // Determine the UI text and whether we have original saved
+  const currentTextUI = (this.messageText || '').trim();
+
+  // If nothing to send (no text and no attachment) -> bail
+  if (!currentTextUI && !this.selectedAttachment) return;
+
+  this.isSending = true;
+
+  try {
+    // base message object (partial)
+    const localMessage: Partial<IMessage & { attachment?: any }> = {
+      msgId: uuidv4(),
+      roomId: this.roomId, // ensure you have roomId in component
+      sender: this.senderId,
+      type: 'text',
+      text: '', // will set below according to translation state
+      timestamp: Date.now(),
+      replyToMsgId: this.replyTo?.message.msgId || '',
+      isEdit: false,
+      reactions: [],
+      isTranslated: false,
+      translatedIn: '',
+      translatedText: '',
+      status: 'pending',
+    };
+
+    // If the message was translated (UI shows translated text and originalEnglishMessage exists),
+    // pack according to the schema:
+    // IMessage.text -> original (English), IMessage.translatedText -> translated version
+    if (this.wasTranslated && this.originalEnglishMessage) {
+      localMessage.text = this.originalEnglishMessage;               // original English source
+      localMessage.translatedText = currentTextUI;                  // translated text shown to user
+      localMessage.isTranslated = true;
+      localMessage.translatedIn = this.translatedLanguage || this.languageName(this.appLanguage);
+    } else {
+      // Not translated: send typed text as original
+      localMessage.text = currentTextUI;
+      localMessage.isTranslated = false;
+      localMessage.translatedText = '';
+      localMessage.translatedIn = '';
     }
+
+    // If there is an attachment, upload and attach metadata (preserve caption as text)
+    if (this.selectedAttachment) {
+      try {
+        const mediaId = await this.uploadAttachmentToS3(this.selectedAttachment);
+
+        localMessage.type = this.selectedAttachment.type || 'other';
+        localMessage.mediaId = mediaId;
+        localMessage.localUrl = undefined; // optional
+        localMessage.cdnUrl = undefined; // optional depending on your upload
+        // you can keep a caption inside text for the message
+        localMessage.text = localMessage.text || ''; // ensure not undefined
+
+        // If you previously stored attachment in an object
+        localMessage['attachment'] = {
+          type: this.selectedAttachment.type,
+          mediaId,
+          fileName: this.selectedAttachment.fileName,
+          mimeType: this.selectedAttachment.mimeType,
+          fileSize: this.selectedAttachment.fileSize,
+          caption: currentTextUI, // caption is same as what user typed/translated
+        };
+
+        // Save to sent folder (your existing FileService)
+        await this.FileService.saveFileToSent(
+          this.selectedAttachment.fileName,
+          this.selectedAttachment.blob
+        );
+      } catch (err) {
+        console.error('Failed to upload attachment:', err);
+        const toast = await this.toastCtrl.create({
+          message: 'Failed to upload attachment. Please try again.',
+          duration: 3000,
+          color: 'danger',
+        });
+        await toast.present();
+        return;
+      }
+    }
+
+    // send message (your chatService expects a Partial<IMessage> or similar)
+    await this.chatService.sendMessage(localMessage as IMessage);
+
+    // clear UI state
+    this.messageText = '';
+    this.originalEnglishMessage = null;
+    this.wasTranslated = false;
+    this.translatedLanguage = '';
+    this.selectedAttachment = null;
+    this.showPreviewModal = false;
+    this.replyToMessage = null;
+    await this.stopTypingSignal();
+    this.scrollToBottom();
+  } catch (error) {
+    console.error('Error sending message:', error);
+    const toast = await this.toastCtrl.create({
+      message: 'Failed to send message. Please try again.',
+      duration: 3000,
+      color: 'danger',
+    });
+    await toast.present();
+  } finally {
+    this.isSending = false;
   }
+}
+
+// // --- properties (add to your component class) ---
+// originalEnglishMessage: string | null = null; // stores original English before translation
+// translatedLanguage: string = ''; // human readable language name (e.g., 'Hindi')
+// appLanguage: string = 'hi'; // user preferred target language code; set this from user settings
+// wasTranslated: boolean = false; // true if current messageText is translated
+// isTranslating: boolean = false; // show spinner / disable translate while in progress
+
+// // change this to your script URL (keep the ?text & ?lang scheme)
+// translationApiBase = 'https://script.google.com/macros/s/AKfycbz-X8ZFe5VFDPq0rRBdL65OrIghLFEw3yQXQiS03sQohoGo_cMpx8l27OCmtQpyFkz_/exec';
+
+// // --- helper: optional language name mapping ---
+// languageMap: Record<string,string> = {
+//   hi: 'Hindi',
+//   fr: 'French',
+//   es: 'Spanish',
+//   de: 'German',
+//   // add codes you support...
+// };
+
+// //  { code: 'ar-EG', label: 'Arabic (Egypt)' },
+// //     { code: 'ar-SA', label: 'Arabic (Saudi Arabia)' },
+// //     { code: 'bn-BD', label: 'Bengali (Bangladesh)' },
+// //     { code: 'de-DE', label: 'German (Germany)' },
+// //     { code: 'en-GB', label: 'English (UK)' },
+// //     { code: 'en-IN', label: 'English (India)' },
+// //     { code: 'en-US', label: 'English (US)' },
+// //     { code: 'es-ES', label: 'Spanish (Spain)' },
+// //     { code: 'es-MX', label: 'Spanish (Mexico)' },
+// //     { code: 'fa-IR', label: 'Persian (Iran)' },
+// //     { code: 'fr-FR', label: 'French (France)' },
+// //     { code: 'gu-IN', label: 'Gujarati (India)' },
+// //     { code: 'hi-IN', label: 'Hindi (India)' },
+// //     { code: 'it-IT', label: 'Italian (Italy)' },
+// //     { code: 'ja-JP', label: 'Japanese' },
+// //     { code: 'ko-KR', label: 'Korean' },
+// //     { code: 'mr-IN', label: 'Marathi (India)' },
+// //     { code: 'pa-IN', label: 'Punjabi (India)' },
+// //     { code: 'pt-BR', label: 'Portuguese (Brazil)' },
+// //     { code: 'pt-PT', label: 'Portuguese (Portugal)' },
+// //     { code: 'ru-RU', label: 'Russian' },
+// //     { code: 'ta-IN', label: 'Tamil (India)' },
+// //     { code: 'te-IN', label: 'Telugu (India)' },
+// //     { code: 'th-TH', label: 'Thai' },
+// //     { code: 'tr-TR', label: 'Turkish' },
+// //     { code: 'ur-PK', label: 'Urdu (Pakistan)' },
+// //     { code: 'vi-VN', label: 'Vietnamese' },
+// //     { code: 'zh-CN', label: 'Chinese (Simplified)' },
+// //     { code: 'zh-TW', label: 'Chinese (Traditional)' },
+// languageName(code: string) {
+//   return this.languageMap[code] || code;
+// }
+// async translateMessage() {
+//   if (this.isTranslating) return;
+
+//   const typed = (this.messageText || '').trim();
+//   if (!typed) {
+//     const t = await this.toastCtrl.create({ message: 'Type a message to translate', duration: 2000, color: 'medium' });
+//     await t.present();
+//     return;
+//   }
+
+//   // Save original English only if not already saved (or if user edited)
+//   if (!this.originalEnglishMessage || !this.wasTranslated) {
+//     this.originalEnglishMessage = typed;
+//   }
+
+//   this.isTranslating = true;
+//   try {
+//     const encoded = encodeURIComponent(this.originalEnglishMessage);
+//     const lang = encodeURIComponent(this.appLanguage || 'hi');
+//     const url = `${this.translationApiBase}?text=${encoded}&lang=${lang}`;
+
+//     const resp = await fetch(url, { method: 'GET' });
+//     if (!resp.ok) throw new Error(`Translation API error ${resp.status}`);
+//     const data = await resp.json();
+
+//     // Expect { t: "translated text" } per your description
+//     const translated = data?.t ?? data?.translatedText ?? null;
+//     if (!translated) throw new Error('Invalid translation response');
+
+//     // Update UI: show translated text in the input
+//     this.messageText = translated;
+//     this.wasTranslated = true;
+//     this.translatedLanguage = this.languageName(this.appLanguage);
+//   } catch (err) {
+//     console.error('translateMessage error', err);
+//     const toast = await this.toastCtrl.create({
+//       message: 'Translation failed. Try again.',
+//       duration: 3000,
+//       color: 'danger',
+//     });
+//     await toast.present();
+//   } finally {
+//     this.isTranslating = false;
+//   }
+// }
+
+
+// // --- clearTranslation(): revert to English before send ---
+// clearTranslation() {
+//   if (this.originalEnglishMessage) {
+//     this.messageText = this.originalEnglishMessage;
+//   }
+//   this.wasTranslated = false;
+//   this.translatedLanguage = '';
+//   // keep originalEnglishMessage so user can still send or re-translate if desired
+// }
+
+// --- properties (add to your component class) ---
+originalEnglishMessage: string | null = null; // stores original English before translation
+translatedLanguage: string = ''; // human readable language name (e.g., 'Hindi')
+appLanguage: string = 'fa-IR'; // user preferred target language code; set this from user settings
+wasTranslated: boolean = false; // true if current messageText is translated
+isTranslating: boolean = false; // show spinner / disable translate while in progress
+
+// change this to your script URL (keep the ?text & ?lang scheme)
+translationApiBase =
+  'https://script.google.com/macros/s/AKfycbz-X8ZFe5VFDPq0rRBdL65OrIghLFEw3yQXQiS03sQohoGo_cMpx8l27OCmtQpyFkz_/exec';
+
+// --- full supported languages map (for readable display) ---
+languageMap: Record<string, string> = {
+  'ar-EG': 'Arabic (Egypt)',
+  'ar-SA': 'Arabic (Saudi Arabia)',
+  'bn-BD': 'Bengali (Bangladesh)',
+  'de-DE': 'German (Germany)',
+  'en-GB': 'English (UK)',
+  'en-IN': 'English (India)',
+  'en-US': 'English (US)',
+  'es-ES': 'Spanish (Spain)',
+  'es-MX': 'Spanish (Mexico)',
+  'fa-IR': 'Persian (Iran)',
+  'fr-FR': 'French (France)',
+  'gu-IN': 'Gujarati (India)',
+  'hi-IN': 'Hindi (India)',
+  'it-IT': 'Italian (Italy)',
+  'ja-JP': 'Japanese',
+  'ko-KR': 'Korean',
+  'mr-IN': 'Marathi (India)',
+  'pa-IN': 'Punjabi (India)',
+  'pt-BR': 'Portuguese (Brazil)',
+  'pt-PT': 'Portuguese (Portugal)',
+  'ru-RU': 'Russian',
+  'ta-IN': 'Tamil (India)',
+  'te-IN': 'Telugu (India)',
+  'th-TH': 'Thai',
+  'tr-TR': 'Turkish',
+  'ur-PK': 'Urdu (Pakistan)',
+  'vi-VN': 'Vietnamese',
+  'zh-CN': 'Chinese (Simplified)',
+  'zh-TW': 'Chinese (Traditional)',
+};
+
+// --- helper: map locale code to readable name ---
+languageName(code: string): string {
+  return this.languageMap[code] || code;
+}
+
+// --- helper: normalize to API base language code ---
+apiLanguageCode(localeCode: string): string {
+  // handle special cases or extract main language
+  if (localeCode === 'zh-TW') return 'zh-TW';
+  if (localeCode === 'zh-CN') return 'zh';
+  return localeCode.split('-')[0]; // e.g., 'hi-IN' -> 'hi'
+}
+
+async translateMessage() {
+  if (this.isTranslating) return;
+
+  const typed = (this.messageText || '').trim();
+  if (!typed) {
+    const t = await this.toastCtrl.create({
+      message: 'Type a message to translate',
+      duration: 2000,
+      color: 'medium',
+    });
+    await t.present();
+    return;
+  }
+
+  // Save original English only if not already saved or user edited
+  if (!this.originalEnglishMessage || !this.wasTranslated) {
+    this.originalEnglishMessage = typed;
+  }
+const savedLang = localStorage.getItem('app_language');
+  if (savedLang) {
+    this.appLanguage = savedLang;
+  }
+  // 🛑 Skip translation if target language is English
+  const langCode = this.apiLanguageCode(this.appLanguage);
+  if (langCode === 'en') {
+    this.messageText = this.originalEnglishMessage;
+    this.wasTranslated = false;
+    this.translatedLanguage = 'English';
+    const toast = await this.toastCtrl.create({
+      message: 'Target language is English — no translation needed.',
+      duration: 2000,
+      color: 'medium',
+    });
+    await toast.present();
+    return;
+  }
+
+  // Proceed with normal translation flow
+  this.isTranslating = true;
+  try {
+    const encoded = encodeURIComponent(this.originalEnglishMessage);
+    const url = `${this.translationApiBase}?text=${encoded}&lang=${langCode}`;
+
+    const resp = await fetch(url, { method: 'GET' });
+    if (!resp.ok) throw new Error(`Translation API error ${resp.status}`);
+    const data = await resp.json();
+
+    const translated = data?.t ?? data?.translatedText ?? null;
+    if (!translated) throw new Error('Invalid translation response');
+
+    this.messageText = translated;
+    this.wasTranslated = true;
+    this.translatedLanguage = this.languageName(this.appLanguage);
+  } catch (err) {
+    console.error('translateMessage error', err);
+    const toast = await this.toastCtrl.create({
+      message: 'Translation failed. Try again.',
+      duration: 3000,
+      color: 'danger',
+    });
+    await toast.present();
+  } finally {
+    this.isTranslating = false;
+  }
+}
+
+
+// --- clearTranslation(): revert to English before send ---
+clearTranslation() {
+  if (this.originalEnglishMessage) {
+    this.messageText = this.originalEnglishMessage;
+  }
+  this.wasTranslated = false;
+  this.translatedLanguage = '';
+  // keep originalEnglishMessage so user can still send or re-translate if desired
+}
+
+
+// Optional: allow user to explicitly discard original
+discardSavedOriginal() {
+  this.originalEnglishMessage = null;
+  this.wasTranslated = false;
+  this.translatedLanguage = '';
+}
 
   //user online or offline logic
   startReceiverStatusPoll(pollIntervalMs = 30000) {

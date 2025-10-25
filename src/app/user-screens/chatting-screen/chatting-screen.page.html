@@ -342,161 +342,177 @@
         (touchmove)="cancelLongPress()"
         (click)="onMessageClick(msg)"
       >
+
+      
         <!-- ===== MESSAGE BUBBLE ===== -->
-        <div
-          class="message-bubble"
-          (click)="openAttachmentModal(msg)"
-          [attr.data-msg-key]="msg.key"
-          [ngClass]="[
-        msg.isMe ? 'sender-message' : 'receiver-message',
-        msg.fadeOut ? 'fade-out' : ''
-       ]"
-        >
-          <!-- Forwarded Label -->
-          <div *ngIf="msg.isForwarded" class="forwarded-label">
-            <ion-icon
-              name="arrow-undo-outline"
-              class="forwarded-icon"
-            ></ion-icon>
-            Forwarded
-          </div>
-
-          <!-- Group Sender Name -->
-          <span
-            *ngIf="chatType === 'group' && msg.sender_id !== senderId"
-            style="font-size: 12px; color: #6c6c6c; margin-left: 5px"
-          >
-            {{ msg.sender_name }}
-          </span>
-
-          <!-- Replied Message -->
-          <div
-            class="replied-message"
-            *ngIf="msg.replyToMessageId"
-            (click)="scrollToRepliedMessage(msg.replyToMessageId)"
-          >
-            <ng-container
-  *ngIf="msg.replyToMessageId && getRepliedMessage(msg.replyToMessageId) as repliedMsg"
+       <div
+  class="message-bubble"
+  (click)="openAttachmentModal(msg)"
+  [attr.data-msg-key]="msg.key"
+  [ngClass]="[
+    msg.isMe ? 'sender-message' : 'receiver-message',
+    msg.fadeOut ? 'fade-out' : ''
+  ]"
 >
-  <div
-    class="replied-container"
-    (click)="scrollToRepliedMessage(msg.replyToMessageId)"
+
+  <!-- Forwarded Label -->
+  <div *ngIf="msg.isForwarded" class="forwarded-label">
+    <ion-icon name="arrow-undo-outline" class="forwarded-icon"></ion-icon>
+    Forwarded
+  </div>
+
+  <!-- Group Sender Name -->
+  <span
+    *ngIf="chatType === 'group' && msg.sender_id !== senderId"
+    style="font-size: 12px; color: #6c6c6c; margin-left: 5px"
   >
-    <div class="replied-header">
-      <ion-icon name="arrow-undo-outline" class="reply-icon"></ion-icon>
-      <span class="replied-sender">
-        {{ repliedMsg.isMe ? 'You' : repliedMsg.sender }}
+    {{ msg.sender_name }}
+  </span>
+
+  <!-- Replied Message -->
+  <div
+    class="replied-message"
+    *ngIf="msg.replyToMsgId"
+    (click)="scrollToRepliedMessage(msg.replyToMsgId)"
+  >
+    <ng-container *ngIf="getRepliedMessage(msg.replyToMsgId) as repliedMsg">
+      <div
+        class="replied-container"
+        (click)="scrollToRepliedMessage(msg.replyToMsgId)"
+      >
+        <div class="replied-header">
+          <ion-icon name="arrow-undo-outline" class="reply-icon"></ion-icon>
+          <span class="replied-sender">
+            {{ repliedMsg.isMe ? 'You' : repliedMsg.sender }}
+          </span>
+        </div>
+        <div class="replied-content">
+          <div class="replied-text" *ngIf="repliedMsg.text">
+            {{ getReplyPreviewText(repliedMsg) }}
+          </div>
+          <div class="replied-attachment" *ngIf="repliedMsg.attachment">
+            <ion-icon name="attach-outline"></ion-icon>
+            {{ getReplyPreviewText(repliedMsg) }}
+          </div>
+        </div>
+      </div>
+    </ng-container>
+  </div>
+
+  <!-- Deleted Message -->
+  <ng-container *ngIf="msg.isDeleted">
+    <ion-text class="message-text" color="medium">
+      <i>This message was deleted</i>
+    </ion-text>
+  </ng-container>
+
+  <!-- Normal Message -->
+  <ng-container *ngIf="!msg.isDeleted">
+
+    <!-- Message Text -->
+<ion-text class="message-text" *ngIf="!msg.attachment && msg.text">
+  {{ msg.showingEnglish || !msg.isTranslated ? msg.text : msg.translatedText }}
+</ion-text>
+
+<!-- Translation Toggle Button -->
+<ion-button
+  *ngIf="msg.isTranslated"
+  fill="clear"
+  size="small"
+  class="toggle-lang-btn"
+  (click)="toggleLanguage(msg)"
+>
+  <ion-icon
+    slot="start"
+    [name]="msg.showingEnglish ? 'globe' : 'language'"
+  ></ion-icon>
+  <span>
+    {{ msg.showingEnglish ? 'Show ' + msg.translatedIn : 'View English' }}
+  </span>
+</ion-button>
+
+
+    <!-- Attachments -->
+    <ng-container *ngIf="msg.attachment">
+      <img
+        *ngIf="msg.attachment.type === 'image'"
+        [src]="msg.attachment.previewUrl"
+        alt="Image"
+        style="max-width: 200px; border-radius: 10px; margin: 5px 0"
+      />
+      <video
+        *ngIf="msg.attachment.type === 'video'"
+        controls
+        style="max-width: 200px; border-radius: 10px; margin: 5px 0"
+      >
+        <source
+          [src]="msg.attachment.previewUrl"
+          [type]="msg.attachment.mimeType || 'video/mp4'"
+        />
+      </video>
+      <audio
+        *ngIf="msg.attachment.type === 'audio'"
+        controls
+        style="margin: 5px 0"
+      >
+        <source
+          [src]="msg.attachment.previewUrl"
+          [type]="msg.attachment.mimeType || 'audio/mpeg'"
+        />
+      </audio>
+      <div *ngIf="msg.attachment.type === 'file'" style="margin: 5px 0">
+        <ion-icon name="document-outline" style="margin-right: 5px"></ion-icon>
+        <a
+          [href]="msg.attachment.previewUrl"
+          [download]="msg.attachment.fileName || 'file'"
+          target="_blank"
+          rel="noopener"
+        >
+          {{ msg.attachment.fileName || 'Download File' }}
+        </a>
+      </div>
+      <ion-text class="message-text" *ngIf="msg.text" style="margin-top: 5px">
+        {{ msg.text }}
+      </ion-text>
+    </ng-container>
+  </ng-container>
+
+  <!-- Timestamp -->
+  <p class="time-stamp status-container">
+    <ion-icon
+      *ngIf="pinnedMessage && pinnedMessage.messageId === msg.message_id"
+      name="pin"
+      class="pin-indicator-timestamp"
+    ></ion-icon>
+    {{ msg.time }}
+    <span *ngIf="msg.isEdit" style="font-size: 11px; color: gray; margin-left: 4px">
+      (edited)
+    </span>
+    <ng-container *ngIf="getStatusIconDescriptorByMsgId(msg.msgId) as icon">
+      <ion-icon [name]="icon.name" [ngClass]="icon.cls" [attr.title]="icon.title"></ion-icon>
+    </ng-container>
+  </p>
+
+  <!-- Reaction Badges -->
+  <!-- <div
+    class="reaction-badges"
+    *ngIf="msg.reactions?.length > 0"
+    [class.right]="msg.sender_id === senderId"
+    [class.left]="msg.sender_id !== senderId"
+  >
+    <div
+      class="badge"
+      *ngFor="let b of msg.reactions"
+      [class.mine]="b.userId == senderId"
+      (click)="onReactionBadgeClick($event, msg, b)"
+    >
+      <span class="emoji">{{ b.emoji }}</span>
+      <span class="cnt" *ngIf="getReactionsCount(msg) > 1">
+        {{ getReactionsCount(msg) }}
       </span>
     </div>
-
-    <div class="replied-content">
-      <div class="replied-text" *ngIf="repliedMsg.text">
-        {{ getReplyPreviewText(repliedMsg) }}
-      </div>
-
-      <div class="replied-attachment" *ngIf="repliedMsg.attachment">
-        <ion-icon name="attach-outline"></ion-icon>
-        {{ getReplyPreviewText(repliedMsg) }}
-      </div>
-    </div>
-  </div>
-</ng-container>
-
-          </div>
-
-          <!-- Deleted Message -->
-          <ng-container *ngIf="msg.isDeleted">
-            <ion-text class="message-text" color="medium"
-              ><i>This message was deleted</i></ion-text
-            >
-          </ng-container>
-
-          <!-- Normal Message -->
-          <ng-container *ngIf="!msg.isDeleted">
-            <ion-text class="message-text" *ngIf="!msg.attachment && msg.text"
-              >{{ msg.text }}</ion-text
-            >
-
-            <!-- Attachments -->
-            <ng-container *ngIf="msg.attachment">
-              <img
-                *ngIf="msg.attachment.type === 'image'"
-                [src]="msg.attachment.previewUrl"
-                alt="Image"
-                style="max-width: 200px; border-radius: 10px; margin: 5px 0"
-              />
-              <video
-                *ngIf="msg.attachment.type === 'video'"
-                controls
-                style="max-width: 200px; border-radius: 10px; margin: 5px 0"
-              >
-                <source
-                  [src]="msg.attachment.previewUrl"
-                  [type]="msg.attachment.mimeType || 'video/mp4'"
-                />
-              </video>
-              <audio
-                *ngIf="msg.attachment.type === 'audio'"
-                controls
-                style="margin: 5px 0"
-              >
-                <source
-                  [src]="msg.attachment.previewUrl"
-                  [type]="msg.attachment.mimeType || 'audio/mpeg'"
-                />
-              </audio>
-              <div *ngIf="msg.attachment.type === 'file'" style="margin: 5px 0">
-                <ion-icon
-                  name="document-outline"
-                  style="margin-right: 5px"
-                ></ion-icon>
-                <a
-                  [href]="msg.attachment.previewUrl"
-                  [download]="msg.attachment.fileName || 'file'"
-                  target="_blank"
-                  rel="noopener"
-                >
-                  {{ msg.attachment.fileName || 'Download File' }}
-                </a>
-              </div>
-              <ion-text
-                class="message-text"
-                *ngIf="msg.text"
-                style="margin-top: 5px"
-              >
-                {{ msg.text }}
-              </ion-text>
-              <!-- <ion-text class="message-text" *ngIf="msg.attachment.caption">
-          {{ msg.attachment.caption }}
-        </ion-text> -->
-            </ng-container>
-          </ng-container>
-
-          <!-- Timestamp -->
-          <p class="time-stamp status-container">
-            <ion-icon
-              *ngIf="pinnedMessage && pinnedMessage.messageId === msg.message_id"
-              name="pin"
-              class="pin-indicator-timestamp"
-            ></ion-icon>
-            {{ msg.time }}
-            <span
-              *ngIf="msg.isEdit"
-              style="font-size: 11px; color: gray; margin-left: 4px"
-              >(edited)</span
-            >
-            <ng-container
-              *ngIf="getStatusIconDescriptorByMsgId(msg.msgId) as icon"
-            >
-              <ion-icon
-                [name]="icon.name"
-                [ngClass]="icon.cls"
-                [attr.title]="icon.title"
-              ></ion-icon>
-            </ng-container>
-          </p>
-
-          <!-- 🟡 COMPACT REACTION BADGE (WhatsApp style) -->
+  </div> -->
+   <!-- 🟡 COMPACT REACTION BADGE (WhatsApp style) -->
           <div
             class="reaction-badges"
             *ngIf="getReactionBadges(msg).length > 0"
@@ -525,7 +541,9 @@
               </span>
             </div>
           </div>
-        </div>
+
+</div>
+
 
         <!-- 🟢 FLOATING REACTION BAR -->
         <div
@@ -729,66 +747,110 @@
     </div>
 
     <!-- INPUT ROW -->
-    <ion-row class="footer-row" style="align-items: center">
-      <ion-col
-        class="message-input-container"
-        style="display: flex; align-items: center; gap: 8px"
-      >
-        <ion-icon
-          name="document-text-outline"
-          class="icon-left"
-          (click)="openKeyboard()"
-        ></ion-icon>
+<ion-row class="footer-row" style="align-items: center; padding: 6px;">
+  <ion-col
+    class="message-input-container"
+    style="display: flex; align-items: center; gap: 8px"
+  >
+    <ion-icon
+      name="document-text-outline"
+      class="icon-left"
+      (click)="openKeyboard()"
+    ></ion-icon>
 
-        <ion-textarea
-          [disabled]="iBlocked"
-          [autoGrow]="true"
-          [(ngModel)]="messageText"
-          placeholder="Message"
-          (ionInput)="onInputTyping()"
-          (ionFocus)="onInputFocus()"
-          (ionBlur)="onInputBlur()"
-          (keyup.enter)="sendMessage()"
-          class="message-input"
-        >
-        </ion-textarea>
+    <!-- textarea bound to messageText -->
+    <ion-textarea
+      [disabled]="iBlocked"
+      [autoGrow]="true"
+      [(ngModel)]="messageText"
+      placeholder="Message"
+      (ionInput)="onInputTyping()"
+      (ionFocus)="onInputFocus()"
+      (ionBlur)="onInputBlur()"
+      (keyup.enter)="sendMessage()"
+      class="message-input"
+    >
+    </ion-textarea>
 
-        <ion-icon
-          name="attach-outline"
-          (click)="pickAttachment()"
-          class="icon-right"
-          [hidden]="iBlocked"
-        ></ion-icon>
-        <ion-icon
-          name="camera-outline"
-          class="icon-right"
-          (click)="openCamera()"
-          [hidden]="iBlocked"
-        ></ion-icon>
-      </ion-col>
+    <!-- Attach / Camera -->
+    <ion-icon
+      name="attach-outline"
+      (click)="pickAttachment()"
+      class="icon-right"
+      [hidden]="iBlocked"
+    ></ion-icon>
+    <ion-icon
+      name="camera-outline"
+      class="icon-right"
+      (click)="openCamera()"
+      [hidden]="iBlocked"
+    ></ion-icon>
+  </ion-col>
 
-      <ion-col size="auto" style="display: flex; align-items: center">
-        <ion-button
-          *ngIf="!showSendButton"
-          class="mic-button"
-          shape="round"
-          [disabled]="iBlocked"
-        >
-          <ion-icon slot="icon-only" name="mic"></ion-icon>
-        </ion-button>
+  <!-- Translate / Clear buttons + Send/Mic -->
+  <ion-col size="auto" style="display: flex; align-items: center; gap:8px;">
+    <!-- Translate button -->
+    <ion-button
+      fill="outline"
+      size="small"
+      (click)="translateMessage()"
+      [disabled]="iBlocked || isTranslating || !messageText?.trim()"
+      title="Translate message to {{ languageName(appLanguage) }}"
+    >
+      <ion-icon slot="start" name="language-outline"></ion-icon>
+      Translate
+    </ion-button>
 
-        <ion-button
-          *ngIf="showSendButton"
-          fill="clear"
-          class="send-btn"
-          shape="round"
-          (click)="sendMessage()"
-          [disabled]="iBlocked"
-        >
-          <ion-icon slot="icon-only" name="send"></ion-icon>
-        </ion-button>
-      </ion-col>
-    </ion-row>
+    <!-- Clear translation (visible only when message was translated) -->
+    <ion-button
+      *ngIf="wasTranslated"
+      fill="clear"
+      size="small"
+      (click)="clearTranslation()"
+      title="Revert to original English"
+    >
+      <ion-icon slot="icon-only" name="refresh-circle-outline"></ion-icon>
+    </ion-button>
+
+    <!-- Mic or Send -->
+    <ion-button
+      *ngIf="!showSendButton"
+      class="mic-button"
+      shape="round"
+      [disabled]="iBlocked"
+    >
+      <ion-icon slot="icon-only" name="mic"></ion-icon>
+    </ion-button>
+
+    <ion-button
+      *ngIf="showSendButton"
+      fill="clear"
+      class="send-btn"
+      shape="round"
+      (click)="sendMessage()"
+      [disabled]="iBlocked || isSending"
+    >
+      <ion-icon slot="icon-only" name="send"></ion-icon>
+    </ion-button>
+  </ion-col>
+</ion-row>
+
+<!-- Translated language info bar shown below input (optional) -->
+<ion-row *ngIf="wasTranslated || isTranslating" style="margin-top:4px;">
+  <ion-col>
+    <ion-chip *ngIf="wasTranslated">
+      <ion-label>
+        Translated to {{ translatedLanguage }} •
+        <small>Tap "Clear" to revert</small>
+      </ion-label>
+    </ion-chip>
+
+    <ion-chip *ngIf="isTranslating">
+      <ion-label>Translating…</ion-label>
+    </ion-chip>
+  </ion-col>
+</ion-row>
+
   </div>
 </div>
 <!-- ========================= -->

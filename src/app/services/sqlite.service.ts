@@ -28,9 +28,10 @@ export interface IMessage {
   roomId: string;
   sender: string;
   type: 'text' | 'image' | 'audio' | 'video' | 'pdf' | 'other';
-  // isTranslated : boolean;   // use in future
-  // translatedIn : string;
-  //translatedText : string;
+  isTranslated : boolean;   
+  translatedIn : string;
+  translatedText : string;
+  showingEnglish:boolean;
   text?: string;
   localUrl?: string;
   cdnUrl?: string;
@@ -174,26 +175,50 @@ const TABLE_SCHEMAS = {
       cdnUrl TEXT
     );
   `,
+  // messages: `
+  //  CREATE TABLE IF NOT EXISTS messages (
+  //   msgId TEXT PRIMARY KEY,
+  //   roomId TEXT NOT NULL,
+  //   sender TEXT NOT NULL,
+  //   type TEXT DEFAULT 'text',
+  //   text TEXT,
+  //   isMe INTEGER DEFAULT 0,
+  //   status TEXT,
+  //   timestamp TEXT NOT NULL,
+  //   receipts TEXT,
+  //   replyToMsgId TEXT,
+  //   isEdit INTEGER DEFAULT 0,
+  //   reactions TEXT,
+  //   deletedFor TEXT,
+  //   mediaId TEXT,
+  //   FOREIGN KEY (roomId) REFERENCES conversations(roomId),
+  //   FOREIGN KEY (mediaId) REFERENCES attachments(mediaId)
+  // );
+  // `,
+
   messages: `
-   CREATE TABLE IF NOT EXISTS messages (
+  CREATE TABLE IF NOT EXISTS messages (
     msgId TEXT PRIMARY KEY,
     roomId TEXT NOT NULL,
     sender TEXT NOT NULL,
     type TEXT DEFAULT 'text',
     text TEXT,
+    mediaId TEXT,
     isMe INTEGER DEFAULT 0,
     status TEXT,
     timestamp TEXT NOT NULL,
     receipts TEXT,
-    replyToMsgId TEXT,
-    isEdit INTEGER DEFAULT 0,
-    reactions TEXT,
     deletedFor TEXT,
-    mediaId TEXT,
+    replyToMsgId TEXT,
+    reactions TEXT,
+    isEdit INTEGER DEFAULT 0,
+    isTranslated INTEGER DEFAULT 0,      -- ✅ New: flag for translation
+    translatedIn TEXT,                   -- ✅ New: language code
+    translatedText TEXT,                 -- ✅ New: translated message text
     FOREIGN KEY (roomId) REFERENCES conversations(roomId),
     FOREIGN KEY (mediaId) REFERENCES attachments(mediaId)
   );
-  `,
+`
 };
 
 @Injectable({
@@ -578,32 +603,63 @@ export class SqliteService {
   }
 
   /** ----------------- MESSAGES ----------------- **/
-  async saveMessage(message: IMessage) {
-    return this.withOpState('saveMessage', async () => {
-      const sql = `
-        INSERT INTO messages 
-        (msgId, roomId, sender, type, text,mediaId, isMe, status, timestamp, receipts, deletedFor, replyToMsgId, reactions, isEdit )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-      `;
-      const params = [
-        message.msgId,
-        message.roomId,
-        message.sender,
-        message.type || 'text',
-        message.text || null,
-        message.mediaId || null,
-        message.isMe ? 1 : 0,
-        message.status,
-        String(message.timestamp),
-        JSON.stringify(message.receipts || {}),
-        JSON.stringify(message.deletedFor || {}),
-        message.replyToMsgId || '',
-        JSON.stringify(message.reactions || []),
-        !!message.isEdit ? 1 : 0,
-      ];
-      await this.db.run(sql, params);
-    });
-  }
+  // async saveMessage(message: IMessage) {
+  //   return this.withOpState('saveMessage', async () => {
+  //     const sql = `
+  //       INSERT INTO messages 
+  //       (msgId, roomId, sender, type, text,mediaId, isMe, status, timestamp, receipts, deletedFor, replyToMsgId, reactions, isEdit )
+  //       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  //     `;
+  //     const params = [
+  //       message.msgId,
+  //       message.roomId,
+  //       message.sender,
+  //       message.type || 'text',
+  //       message.text || null,
+  //       message.mediaId || null,
+  //       message.isMe ? 1 : 0,
+  //       message.status,
+  //       String(message.timestamp),
+  //       JSON.stringify(message.receipts || {}),
+  //       JSON.stringify(message.deletedFor || {}),
+  //       message.replyToMsgId || '',
+  //       JSON.stringify(message.reactions || []),
+  //       !!message.isEdit ? 1 : 0,
+  //     ];
+  //     await this.db.run(sql, params);
+  //   });
+  // }
+async saveMessage(message: IMessage) {
+  return this.withOpState('saveMessage', async () => {
+    const sql = `
+      INSERT INTO messages 
+      (msgId, roomId, sender, type, text, mediaId, isMe, status, timestamp, receipts, deletedFor, replyToMsgId, reactions, isEdit, isTranslated, translatedIn, translatedText)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+
+    const params = [
+      message.msgId,
+      message.roomId,
+      message.sender,
+      message.type || 'text',
+      message.text || null,
+      message.mediaId || null,
+      message.isMe ? 1 : 0,
+      message.status,
+      String(message.timestamp),
+      JSON.stringify(message.receipts || {}),
+      JSON.stringify(message.deletedFor || {}),
+      message.replyToMsgId || '',
+      JSON.stringify(message.reactions || []),
+      !!message.isEdit ? 1 : 0,
+      message.isTranslated ? 1 : 0,
+      message.translatedIn || '',
+      message.translatedText || '',
+    ];
+
+    await this.db.run(sql, params);
+  });
+}
 
   saveAttachment(attachment: IAttachment) {
     return this.withOpState('saveAttachment', async () => {
