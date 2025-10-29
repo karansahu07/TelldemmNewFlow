@@ -23,16 +23,68 @@ export interface IUser {
   updatedAt?: Date;
 }
 
+// export interface IMessage {
+//   msgId: string;
+//   roomId: string;
+//   sender: string;
+//   type: 'text' | 'image' | 'audio' | 'video' | 'pdf' | 'other';
+//   isTranslated : boolean;   
+//   translatedIn : string;
+//   translatedText : string;
+//   showingEnglish:boolean;
+//   text?: string;
+//   localUrl?: string;
+//   cdnUrl?: string;
+//   mediaId?: string;
+//   isMe?: boolean;
+//   status?: 'failed' | 'pending' | 'sent' | 'delivered' | 'read';
+//   timestamp: string | Date | number;
+//   deletedFor?: {
+//     everyone: boolean;
+//     users: [];
+//   };
+//   reactions: { userId: string; emoji: string | null }[];
+//   replyToMsgId: string;
+//   isEdit: boolean;
+//   isForwarded?: boolean;
+//   receipts?: {
+//     read: {
+//       status: boolean;
+//       readBy: {
+//         userId: string;
+//         timestamp: string | number | Date;
+//       }[];
+//     };
+//     delivered: {
+//       status: boolean;
+//       deliveredTo: {
+//         userId: string;
+//         timestamp: string | number | Date;
+//       }[];
+//     };
+//   };
+// }
 export interface IMessage {
   msgId: string;
   roomId: string;
   sender: string;
   type: 'text' | 'image' | 'audio' | 'video' | 'pdf' | 'other';
+  // --
   isTranslated : boolean;   
   translatedIn : string;
   translatedText : string;
   showingEnglish:boolean;
   text?: string;
+  // --
+   // 🟦 Nested translations (multi-language support)
+  translations?: {
+    [langCode: string]: {
+      code: string;   // e.g. 'en', 'fr', 'hi'
+      label: string;  // e.g. 'English', 'French', 'Hindi'
+      text: string;   // Translated message text
+    };
+  };
+
   localUrl?: string;
   cdnUrl?: string;
   mediaId?: string;

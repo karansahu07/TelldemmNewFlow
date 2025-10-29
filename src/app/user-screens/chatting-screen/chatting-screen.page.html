@@ -233,17 +233,7 @@
   </ion-toolbar>
 </ion-header>
 
-<!-- BLOCK BANNERS -->
-<!-- <div *ngIf="chatType === 'private'">
-  <div *ngIf="iBlocked" class="blocked-banner" style="padding:8px; text-align:center; background:#fff3f3; color:#b00020;">
-    You have blocked {{ receiver_name }}. Messages won't be sent.
-    <button ion-button (click)="unblockFromChat()" style="margin-left:8px; border:none; background:transparent; color: #0a66ff;">Unblock</button>
-  </div>
 
-  <div *ngIf="!iBlocked && theyBlocked" class="blocked-banner" style="padding:8px; text-align:center; background:#fff7e6; color:#b36b00;">
-    You cannot send messages to {{ receiver_name }} — they have blocked you.
-  </div>
-</div> -->
 
 <ion-content class="chat-background" [fullscreen]="true" [scrollEvents]="true">
   <!-- Pinned Message Banner (Alternative/Mobile View) -->
@@ -493,25 +483,7 @@
     </ng-container>
   </p>
 
-  <!-- Reaction Badges -->
-  <!-- <div
-    class="reaction-badges"
-    *ngIf="msg.reactions?.length > 0"
-    [class.right]="msg.sender_id === senderId"
-    [class.left]="msg.sender_id !== senderId"
-  >
-    <div
-      class="badge"
-      *ngFor="let b of msg.reactions"
-      [class.mine]="b.userId == senderId"
-      (click)="onReactionBadgeClick($event, msg, b)"
-    >
-      <span class="emoji">{{ b.emoji }}</span>
-      <span class="cnt" *ngIf="getReactionsCount(msg) > 1">
-        {{ getReactionsCount(msg) }}
-      </span>
-    </div>
-  </div> -->
+  
    <!-- 🟡 COMPACT REACTION BADGE (WhatsApp style) -->
           <div
             class="reaction-badges"
@@ -519,13 +491,7 @@
             [class.right]="msg.sender_id === senderId"
             [class.left]="msg.sender_id !== senderId"
           >
-            <!-- <div class="badge"
-           *ngFor="let b of getReactionBadges(msg)"
-           [class.mine]="b.mine"
-           (click)="addReaction(msg, b.emoji)">
-        <span class="emoji">{{ b.emoji }}</span>
-        <span class="cnt" *ngIf="b.count > 1">{{ b.count }}</span>
-      </div> -->
+            
             <div
               class="badge"
               *ngFor="let b of msg.reactions"
@@ -650,22 +616,6 @@
 <!-- ========================= -->
 <!-- Message Input Footer (updated) -->
 <div class="footer-fixed">
-  <!-- If current user has blocked the contact, show action footer -->
-  <!-- <div *ngIf="iBlocked" class="blocked-action-footer"
-    style="display:flex; justify-content:space-between; align-items:center; padding:12px 16px; background:#fff; border-top:1px solid #eee;">
-    <button (click)="deleteChat()"
-      style="display:flex; align-items:center; gap:8px; border:none; background:transparent; color:#d32f2f; font-weight:600;">
-      <ion-icon name="trash-outline"></ion-icon>
-      Delete chat
-    </button>
-
-    <button (click)="unblockFromChat()"
-      style="display:flex; align-items:center; gap:8px; border:none; background:transparent; color:#138000; font-weight:600;">
-      <ion-icon name="ban-outline"></ion-icon>
-      Unblock
-    </button>
-  </div> -->
-
   <!-- Normal footer: typing indicator, reply preview, input row -->
   <div *ngIf="!iBlocked">
     <!-- Typing indicator (above keyboard) -->

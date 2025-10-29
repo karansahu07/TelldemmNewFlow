@@ -273,68 +273,9 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
       (await this.secureStorage.getItem('receiver_name')) ||
       '';
 
-    // const rawId = this.route.snapshot.queryParamMap.get('receiverId') || '';
-    // const chatTypeParam = this.route.snapshot.queryParamMap.get('isGroup');
-    // const phoneFromQuery =
-      // this.route.snapshot.queryParamMap.get('receiver_phone');
-
-    // this.chatType = chatTypeParam === 'true' ? 'group' : 'private';
-
-    // if (this.chatType === 'group') {
-    //   this.roomId = decodeURIComponent(rawId);
-
-    //   try {
-    //     const res = await this.chatService.fetchGroupWithProfiles(this.roomId);
-    //     if (!res) return;
-    //     const { groupName, groupMembers } = res;
-    //     this.groupName = groupName;
-    //     this.groupMembers = groupMembers;
-    //   } catch (err) {
-    //     console.warn('Failed to fetch group with profiles', err);
-    //     this.groupName = 'Group';
-    //     this.groupMembers = [];
-    //   }
-    // } else {
-    //   this.receiverId = decodeURIComponent(rawId);
-    //   this.roomId = this.getRoomId(this.senderId, this.receiverId);
-    //   this.receiver_phone =
-    //     phoneFromQuery || localStorage.getItem('receiver_phone') || '';
-    //   localStorage.setItem('receiver_phone', this.receiver_phone);
-    // }
-
-    // this.setupTypingListener();
-
-    // await this.chatService.resetUnreadCount(this.roomId, this.senderId);
-    // await this.markMessagesAsRead();
-
-    // try {
-    //   const db = getDatabase();
-    //   try {
-    //     const myTypingRef = dbRef(db, `typing/${this.roomId}/${this.senderId}`);
-    //     onDisconnect(myTypingRef).remove();
-    //   } catch (err) {
-    //     console.warn('onDisconnect setup failed', err);
-    //   }
-
-    //   const tsub = this.typingInput$
-    //     .pipe(throttleTime(1200, undefined, { leading: true, trailing: true }))
-    //     .subscribe(() => {
-    //       this.sendTypingSignal();
-    //     });
-    //   this.typingRxSubs.push(tsub);
-    // } catch (err) {
-    //   console.warn('Typing setup error', err);
-    // }
-
-    // await this.loadFromLocalStorage();
+    
     this.listenForMessages();
-    // this.setupPinnedMessageListener();
-    // this.checkMobileView();
-    // setTimeout(() => this.scrollToBottom(), 100);
-    // await this.loadInitialMessages();
-    // this.loadReceiverProfile();
-    // await this.checkIfBlocked();
-    // this.startReceiverStatusPoll();
+   
   }
 
   onInputTyping() {
@@ -376,69 +317,6 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  // async ionViewWillEnter() {
-  //   // console.log({chatTitle})
-  //   // if (currentChat) {}
-  //   //    try {
-  //   //   this.pfUsersSub = this.chatService.platformUsers$.subscribe((users) => {
-  //   //     // Normalize fields to be consistent with what ContactsPage does
-  //   //     this.pfUsers = (users || []).map((u: any) => ({
-  //   //       userId: u.userId ?? u.user_id ?? u.id ?? null,
-  //   //       username: u.username ?? u.name ?? u.displayName ?? '',
-  //   //       phoneNumber: u.phoneNumber ?? u.phone_number ?? '',
-  //   //       avatar: u.avatar ?? u.profile ?? null,
-  //   //       // isOnPlatform: !!u.isOnPlatform ?? true,
-  //   //     }));
-  //   //     console.log("this.pfUsers",this.pfUsers)
-  //   //     // optional debug
-  //   //     // console.log('pfUsers updated', this.pfUsers);
-  //   //   });
-  //   // } catch (err) {
-  //   //   console.warn('Failed to subscribe to platform users', err);
-  //   // }
-  //   // const nameFromQuery =
-  //   //   this.route.snapshot.queryParamMap.get('receiver_name');
-  //   // this.receiver_name =
-  //   //   nameFromQuery ||
-  //   //   (await this.secureStorage.getItem('receiver_name')) ||
-  //   //   '';
-  //   // const rawId = this.route.snapshot.queryParamMap.get('receiverId') || '';
-  //   // const chatTypeParam = this.route.snapshot.queryParamMap.get('isGroup');
-  //   // const phoneFromQuery =
-  //   //   this.route.snapshot.queryParamMap.get('receiver_phone');
-  //   // this.chatType = chatTypeParam === 'true' ? 'group' : 'private';
-  //   // if (this.chatType === 'group') {
-  //   //   this.roomId = decodeURIComponent(rawId);
-  //   //   try {
-  //   //     const res = await this.chatService.fetchGroupWithProfiles(this.roomId);
-  //   //     if (!res) return;
-  //   //     const { groupName, groupMembers } = res;
-  //   //     this.groupName = groupName;
-  //   //     this.groupMembers = groupMembers;
-  //   //   } catch (err) {
-  //   //     console.warn('Failed to fetch group with profiles', err);
-  //   //     this.groupName = 'Group';
-  //   //     this.groupMembers = [];
-  //   //   }
-  //   //   this.setupTypingListener();
-  //   // } else {
-  //   //   this.receiverId = decodeURIComponent(rawId);
-  //   //   this.roomId = this.getRoomId(this.senderId, this.receiverId);
-  //   //   this.receiver_phone =
-  //   //     phoneFromQuery || localStorage.getItem('receiver_phone') || '';
-  //   //   localStorage.setItem('receiver_phone', this.receiver_phone);
-  //   // }
-  //   // await this.chatService.resetUnreadCount(this.roomId, this.senderId);
-  //   // await this.markMessagesAsRead();
-  //   // // await this.loadFromLocalStorage();
-  //   // // this.listenForMessages();
-  //   // const nav = this.router.getCurrentNavigation();
-  //   // const state = nav?.extras?.state;
-  //   // if (state && state['imageToSend']) {
-  //   //   this.attachmentPath = state['imageToSend'];
-  //   // }
-  //   // this.loadReceiverProfile();
-  // }
 
   async ionViewWillEnter() {
     await this.chatService.loadMessages();
@@ -463,34 +341,6 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     });
 
 
-
-//   async ionViewWillEnter() {
-//   await this.chatService.loadMessages();
-//   this.chatService.syncMessagesWithServer();
-
-//   this.chatService.getMessages().subscribe(async (msgs: any) => {
-//     // Group messages by date
-//     this.groupedMessages = (await this.groupMessagesByDate(
-//       msgs as any[]
-//     )) as any[];
-
-//     // Save all messages
-//     this.allMessage = msgs as IMessage[];
-
-//     // Initialize showingEnglish flag for each message
-//     this.allMessage.forEach(msg => {
-//       msg.showingEnglish = true; // default: show English
-//     });
-
-//     // Mark messages as read if not sent by me
-//     for (const msg of msgs) {
-//       if (!msg.isMe) {
-//         console.log('Marking read from chat screen', msg);
-//         this.chatService.markAsRead(msg.msgId);
-//       }
-//     }
-//   });
-// }
 
 
     //scroll to bottom pagination load messages
@@ -570,11 +420,6 @@ if (this.chatType === 'private') {
   getStatusIconDescriptorByMsgId(msgId: string): IconDescriptor | null {
     if (!msgId || !this.allMessage.length) return null;
 
-    // const messagesMap: Map<string, IMessage[]> = (this._messages$ as any).value;
-    // if (!messagesMap || !(messagesMap instanceof Map)) return null;
-
-    // linear search across rooms — fine for small-to-medium stores. See note below.
-    // for (const [, list] of messagesMap.entries()) {
     const msg = this.allMessage.find((m) => m.msgId === msgId);
     if (!msg?.isMe) {
       return null;
@@ -1874,36 +1719,7 @@ if (this.chatType === 'private') {
     return message.msgId;
   }
 
-  // async ngAfterViewInit() {
-  //   if (this.ionContent) {
-  //     this.ionContent.ionScroll.subscribe(async (event: any) => {
-  //       if (
-  //         event.detail.scrollTop < 20 &&
-  //         this.chatService.hasMoreMessages &&
-  //         !this.isLoadingMore
-  //       ) {
-  //         await this.chatService.loadMessages();
-  //         // await this.loadMoreMessages();
-  //       } else {
-  //         console.log('Not more messages');
-  //       }
-  //     });
-  //   }
-
-  //   this.setDynamicPadding();
-  //   window.addEventListener('resize', this.resizeHandler);
-
-  //   const footer = this.el.nativeElement.querySelector(
-  //     '.footer-fixed'
-  //   ) as HTMLElement;
-  //   if (footer && 'ResizeObserver' in window) {
-  //     const ro = new (window as any).ResizeObserver(() =>
-  //       this.setDynamicPadding()
-  //     );
-  //     ro.observe(footer);
-  //     (this as any)._ro = ro;
-  //   }
-  // }
+  
 
   //new this method used in pagination
   async ngAfterViewInit() {
@@ -2005,124 +1821,7 @@ if (this.chatType === 'private') {
   }
 
   async listenForMessages() {
-    // this.messageSub?.unsubscribe();
-    // this.messageSub = this.chatService
-    //   .getMessages()
-    //   .subscribe(async (newMessages: any) => {
-    //     if (!Array.isArray(newMessages)) return;
-    //     const decryptPromises = newMessages.map((msg) =>
-    //       this.encryptionService
-    //         .decrypt(msg.text || '')
-    //         .then((dt) => ({ msg, decryptedText: dt }))
-    //         .catch((err) => {
-    //           console.warn('decrypt msg.text failed for key', msg.key, err);
-    //           return { msg, decryptedText: '' };
-    //         })
-    //     );
-    //     const decryptedPairs = await Promise.all(decryptPromises);
-    //     const existingById: Record<string, number> = {};
-    //     this.allMessages.forEach((m, i) => {
-    //       if (m.msgId) existingById[String(m.msgId)] = i;
-    //     });
-    //     for (const pair of decryptedPairs) {
-    //       const msg = pair.msg;
-    //       const serverKey = msg.key || null;
-    //       const messageId = msg.message_id || uuidv4();
-    //       const dm: Message = {
-    //         ...msg,
-    //         key: serverKey,
-    //         message_id: messageId,
-    //         text: pair.decryptedText,
-    //         reactions: msg.reactions || {}, // ✅ Ensure reactions are included
-    //       };
-    //       if (dm.attachment && (dm.attachment as any).caption) {
-    //         try {
-    //           const encCap = (dm.attachment as any).caption;
-    //           if (encCap && typeof encCap === 'string') {
-    //             const captionPlain = await this.encryptionService.decrypt(
-    //               encCap
-    //             );
-    //             (dm.attachment as any).caption = captionPlain;
-    //           }
-    //         } catch (err) {
-    //           console.warn(
-    //             'Failed to decrypt attachment.caption for message_id',
-    //             messageId,
-    //             err
-    //           );
-    //         }
-    //       }
-    //       if (this.applyDeletionFilters(dm)) {
-    //         if (existingById[String(messageId)] !== undefined) {
-    //           const idx = existingById[String(messageId)];
-    //           this.allMessages[idx] = { ...this.allMessages[idx], ...dm };
-    //         }
-    //         continue;
-    //       }
-    //       const existingIndex = existingById[String(messageId)];
-    //       if (existingIndex !== undefined) {
-    //         const old = this.allMessages[existingIndex];
-    //         const merged: Message = {
-    //           ...old,
-    //           ...dm,
-    //           key: dm.key || old.key,
-    //           reactions: dm.reactions || old.reactions || {}, // ✅ Merge reactions
-    //         };
-    //         if ((old as any).localOnly !== undefined)
-    //           (merged as any).localOnly = (old as any).localOnly;
-    //         if ((old as any).isLocallyEdited !== undefined)
-    //           (merged as any).isLocallyEdited = (old as any).isLocallyEdited;
-    //         this.allMessages[existingIndex] = merged;
-    //       } else {
-    //         this.allMessages.push(dm);
-    //         existingById[String(messageId)] = this.allMessages.length - 1;
-    //       }
-    //       if (dm.receiver_id === this.senderId && !dm.read) {
-    //         try {
-    //           await this.chatService.markRead(this.roomId, dm.key);
-    //           await this.chatService.resetUnreadCount(
-    //             this.roomId,
-    //             this.senderId
-    //           );
-    //         } catch (err) {
-    //           console.warn('markRead/resetUnreadCount failed', err);
-    //         }
-    //       }
-    //     }
-    //     const seenIds: Record<string, boolean> = {};
-    //     this.allMessages = this.allMessages.filter((m) => {
-    //       const id = String(m.message_id || '');
-    //       if (!id) return true;
-    //       if (seenIds[id]) return false;
-    //       seenIds[id] = true;
-    //       return true;
-    //     });
-    //     this.allMessages.sort((a, b) => {
-    //       const ta =
-    //         Number(a.timestamp) || new Date(a.timestamp || 0).getTime();
-    //       const tb =
-    //         Number(b.timestamp) || new Date(b.timestamp || 0).getTime();
-    //       return ta - tb;
-    //     });
-    //     const visibleAllMessages = this.allMessages.filter(
-    //       (m) => !this.applyDeletionFilters(m)
-    //     );
-    //     const keepCount = Math.max(
-    //       this.limit || 50,
-    //       this.displayedMessages?.length || 0
-    //     );
-    //     const startIdx = Math.max(0, visibleAllMessages.length - keepCount);
-    //     this.displayedMessages = visibleAllMessages.slice(startIdx);
-    //     this.groupedMessages = await this.groupMessagesByDate(
-    //       this.displayedMessages
-    //     );
-    //     this.saveToLocalStorage();
-    //     if (this.pinnedMessage) {
-    //       this.findPinnedMessageDetails(this.pinnedMessage.key);
-    //     }
-    //     await Promise.resolve();
-    //     this.scrollToBottom();
-    //   });
+  
     this.observeVisibleMessages();
   }
 
@@ -2424,75 +2123,7 @@ toggleLanguage(msg: any) {
     this.replyToMessage = message;
   }
 
-  // async sendMessage() {
-  //   if (this.isSending) return;
-
-  //   this.isSending = true;
-
-  //   try {
-  //     const plainText = this.messageText.trim();
-  //     const localMessage: Partial<IMessage & { attachment?: IAttachment }> = {
-  //       sender: this.senderId,
-  //       text: plainText,
-  //       timestamp: Date.now(),
-  //       msgId: uuidv4(),
-  //       replyToMsgId: this.replyTo?.message.msgId || '',
-  //       isEdit: false,
-  //       type: 'text',
-  //       reactions: [],
-  //     };
-
-  //     if (this.selectedAttachment) {
-  //       try {
-  //         const mediaId = await this.uploadAttachmentToS3(
-  //           this.selectedAttachment
-  //         );
-
-  //         localMessage.attachment = {
-  //           type: this.selectedAttachment.type,
-  //           mediaId: mediaId,
-  //           fileName: this.selectedAttachment.fileName,
-  //           mimeType: this.selectedAttachment.mimeType,
-  //           fileSize: this.selectedAttachment.fileSize,
-  //           caption: plainText, // send encrypted caption
-  //         };
-
-  //         const file_path = await this.FileService.saveFileToSent(
-  //           this.selectedAttachment.fileName,
-  //           this.selectedAttachment.blob
-  //         );
-  //       } catch (error) {
-  //         console.error('Failed to upload attachment:', error);
-  //         const toast = await this.toastCtrl.create({
-  //           message: 'Failed to upload attachment. Please try again.',
-  //           duration: 3000,
-  //           color: 'danger',
-  //         });
-  //         await toast.present();
-  //         return;
-  //       }
-  //     }
-
-  //     await this.chatService.sendMessage(localMessage);
-  //     // clear UI state
-  //     this.messageText = '';
-  //     this.selectedAttachment = null;
-  //     this.showPreviewModal = false;
-  //     this.replyToMessage = null;
-  //     await this.stopTypingSignal();
-  //     this.scrollToBottom();
-  //   } catch (error) {
-  //     console.error('Error sending message:', error);
-  //     const toast = await this.toastCtrl.create({
-  //       message: 'Failed to send message. Please try again.',
-  //       duration: 3000,
-  //       color: 'danger',
-  //     });
-  //     await toast.present();
-  //   } finally {
-  //     this.isSending = false;
-  //   }
-  // }
+ 
 
 async sendMessage() {
   if (this.isSending) return;
@@ -2604,115 +2235,6 @@ async sendMessage() {
   }
 }
 
-// // --- properties (add to your component class) ---
-// originalEnglishMessage: string | null = null; // stores original English before translation
-// translatedLanguage: string = ''; // human readable language name (e.g., 'Hindi')
-// appLanguage: string = 'hi'; // user preferred target language code; set this from user settings
-// wasTranslated: boolean = false; // true if current messageText is translated
-// isTranslating: boolean = false; // show spinner / disable translate while in progress
-
-// // change this to your script URL (keep the ?text & ?lang scheme)
-// translationApiBase = 'https://script.google.com/macros/s/AKfycbz-X8ZFe5VFDPq0rRBdL65OrIghLFEw3yQXQiS03sQohoGo_cMpx8l27OCmtQpyFkz_/exec';
-
-// // --- helper: optional language name mapping ---
-// languageMap: Record<string,string> = {
-//   hi: 'Hindi',
-//   fr: 'French',
-//   es: 'Spanish',
-//   de: 'German',
-//   // add codes you support...
-// };
-
-// //  { code: 'ar-EG', label: 'Arabic (Egypt)' },
-// //     { code: 'ar-SA', label: 'Arabic (Saudi Arabia)' },
-// //     { code: 'bn-BD', label: 'Bengali (Bangladesh)' },
-// //     { code: 'de-DE', label: 'German (Germany)' },
-// //     { code: 'en-GB', label: 'English (UK)' },
-// //     { code: 'en-IN', label: 'English (India)' },
-// //     { code: 'en-US', label: 'English (US)' },
-// //     { code: 'es-ES', label: 'Spanish (Spain)' },
-// //     { code: 'es-MX', label: 'Spanish (Mexico)' },
-// //     { code: 'fa-IR', label: 'Persian (Iran)' },
-// //     { code: 'fr-FR', label: 'French (France)' },
-// //     { code: 'gu-IN', label: 'Gujarati (India)' },
-// //     { code: 'hi-IN', label: 'Hindi (India)' },
-// //     { code: 'it-IT', label: 'Italian (Italy)' },
-// //     { code: 'ja-JP', label: 'Japanese' },
-// //     { code: 'ko-KR', label: 'Korean' },
-// //     { code: 'mr-IN', label: 'Marathi (India)' },
-// //     { code: 'pa-IN', label: 'Punjabi (India)' },
-// //     { code: 'pt-BR', label: 'Portuguese (Brazil)' },
-// //     { code: 'pt-PT', label: 'Portuguese (Portugal)' },
-// //     { code: 'ru-RU', label: 'Russian' },
-// //     { code: 'ta-IN', label: 'Tamil (India)' },
-// //     { code: 'te-IN', label: 'Telugu (India)' },
-// //     { code: 'th-TH', label: 'Thai' },
-// //     { code: 'tr-TR', label: 'Turkish' },
-// //     { code: 'ur-PK', label: 'Urdu (Pakistan)' },
-// //     { code: 'vi-VN', label: 'Vietnamese' },
-// //     { code: 'zh-CN', label: 'Chinese (Simplified)' },
-// //     { code: 'zh-TW', label: 'Chinese (Traditional)' },
-// languageName(code: string) {
-//   return this.languageMap[code] || code;
-// }
-// async translateMessage() {
-//   if (this.isTranslating) return;
-
-//   const typed = (this.messageText || '').trim();
-//   if (!typed) {
-//     const t = await this.toastCtrl.create({ message: 'Type a message to translate', duration: 2000, color: 'medium' });
-//     await t.present();
-//     return;
-//   }
-
-//   // Save original English only if not already saved (or if user edited)
-//   if (!this.originalEnglishMessage || !this.wasTranslated) {
-//     this.originalEnglishMessage = typed;
-//   }
-
-//   this.isTranslating = true;
-//   try {
-//     const encoded = encodeURIComponent(this.originalEnglishMessage);
-//     const lang = encodeURIComponent(this.appLanguage || 'hi');
-//     const url = `${this.translationApiBase}?text=${encoded}&lang=${lang}`;
-
-//     const resp = await fetch(url, { method: 'GET' });
-//     if (!resp.ok) throw new Error(`Translation API error ${resp.status}`);
-//     const data = await resp.json();
-
-//     // Expect { t: "translated text" } per your description
-//     const translated = data?.t ?? data?.translatedText ?? null;
-//     if (!translated) throw new Error('Invalid translation response');
-
-//     // Update UI: show translated text in the input
-//     this.messageText = translated;
-//     this.wasTranslated = true;
-//     this.translatedLanguage = this.languageName(this.appLanguage);
-//   } catch (err) {
-//     console.error('translateMessage error', err);
-//     const toast = await this.toastCtrl.create({
-//       message: 'Translation failed. Try again.',
-//       duration: 3000,
-//       color: 'danger',
-//     });
-//     await toast.present();
-//   } finally {
-//     this.isTranslating = false;
-//   }
-// }
-
-
-// // --- clearTranslation(): revert to English before send ---
-// clearTranslation() {
-//   if (this.originalEnglishMessage) {
-//     this.messageText = this.originalEnglishMessage;
-//   }
-//   this.wasTranslated = false;
-//   this.translatedLanguage = '';
-//   // keep originalEnglishMessage so user can still send or re-translate if desired
-// }
-
-// --- properties (add to your component class) ---
 originalEnglishMessage: string | null = null; // stores original English before translation
 translatedLanguage: string = ''; // human readable language name (e.g., 'Hindi')
 appLanguage: string = 'fa-IR'; // user preferred target language code; set this from user settings
@@ -3186,50 +2708,7 @@ discardSavedOriginal() {
     msg: IMessage,
     badge: { emoji: string | null; userId: string }
   ) {
-    // ev.stopPropagation();
-    // // Build header text: "1 reaction" / "3 reactions"
-    // const header =
-    //   badge.count === 1 ? '1 reaction' : `${badge.count} reactions`;
-    // // If badge.mine === true, show the remove option; else show only view
-    // const buttons: any[] = [];
-    // // Show the emoji/count as a disabled info row
-    // buttons.push({
-    //   text: `${badge.emoji}  ${badge.count}`,
-    //   icon: undefined,
-    //   role: undefined,
-    //   handler: () => {
-    //     /* noop - disabled by setting css or no-op here */
-    //   },
-    //   cssClass: 'reaction-info-button',
-    // });
-    // // If the current user reacted with this emoji, show "Tap to remove"
-    // if (badge.mine) {
-    //   buttons.push({
-    //     text: 'Tap to remove',
-    //     icon: 'trash',
-    //     handler: async () => {
-    //       // call existing addReaction which toggles/remove when same emoji present
-    //       // await this.addReaction(msg, badge.emoji);
-    //     },
-    //   });
-    // } else {
-    //   // Optionally allow user to react with this same emoji (i.e., add their reaction)
-    //   buttons.push({
-    //     text: `React with ${badge.emoji}`,
-    //     icon: undefined,
-    //     handler: async () => {
-    //       // await this.addReaction(msg, badge.emoji);
-    //     },
-    //   });
-    // }
-    // // Cancel button
-    // buttons.push({ text: 'Cancel', role: 'cancel' });
-    // const sheet = await this.actionSheetCtrl.create({
-    //   header,
-    //   buttons,
-    //   cssClass: 'reaction-action-sheet',
-    // });
-    // await sheet.present();
+    
   }
 
   goToProfile() {
