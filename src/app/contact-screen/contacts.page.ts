@@ -473,16 +473,15 @@ export class ContactsPage implements OnInit {
         )
         .subscribe({
           next: async (res: any) => {
-            // attempt to read backendGroupId from several common response shapes
             const backendGroupId =
-              res?.group?.group_id ??
+              res?.group?.group?.group_id ??
               res?.group?.groupId ??
               res?.group?.id ??
               res?.group_id ??
               res?.data?.group_id ??
               res?.data?.id ??
               res?.id;
-
+            // console.log({backendGroupId})
             if (backendGroupId) {
               try {
                 await this.firebaseChatService.updateBackendGroupId(

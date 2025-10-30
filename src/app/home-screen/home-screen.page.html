@@ -31,7 +31,7 @@
         <ion-button (click)="onPinSelected()">
           <ion-icon name="pin-outline"></ion-icon>
         </ion-button>
-        <ion-button (click)="onDeleteSelected()">
+        <ion-button (click)="deleteMultipleChats()">
           <ion-icon name="trash-outline"></ion-icon>
         </ion-button>
         <ion-button (click)="onMuteSelected()">
@@ -264,7 +264,7 @@
 
   <ion-list *ngIf="!isLoading">
     <ion-item
-      *ngFor="let chat of conversations"
+      *ngFor="let chat of filteredChats"
       [class.selected]="chat.isSelected"
       [class.archived]="chat.isArchived"
       (click)="onChatRowClick(chat, $event)"

@@ -230,7 +230,13 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
   private emojiTargetMsg: Message | null = null;
 
   private allMessage: IMessage[] = [];
-  chatType : string | null = null;
+  chatType: string | null = null;
+
+ receiverStatus: 'online' | 'offline' = 'offline';
+  lastSeenTime: string = '';
+  isReceiverTyping: boolean = false;
+  private presenceSubscription?: Subscription;
+  private typingTimeout: any;
 
   constructor(
     private chatService: FirebaseChatService,
@@ -273,9 +279,68 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
       (await this.secureStorage.getItem('receiver_name')) ||
       '';
 
-    
-    this.listenForMessages();
-   
+    // const rawId = this.route.snapshot.queryParamMap.get('receiverId') || '';
+    // const chatTypeParam = this.route.snapshot.queryParamMap.get('isGroup');
+    // const phoneFromQuery =
+    // this.route.snapshot.queryParamMap.get('receiver_phone');
+
+    // this.chatType = chatTypeParam === 'true' ? 'group' : 'private';
+
+    // if (this.chatType === 'group') {
+    //   this.roomId = decodeURIComponent(rawId);
+
+    //   try {
+    //     const res = await this.chatService.fetchGroupWithProfiles(this.roomId);
+    //     if (!res) return;
+    //     const { groupName, groupMembers } = res;
+    //     this.groupName = groupName;
+    //     this.groupMembers = groupMembers;
+    //   } catch (err) {
+    //     console.warn('Failed to fetch group with profiles', err);
+    //     this.groupName = 'Group';
+    //     this.groupMembers = [];
+    //   }
+    // } else {
+    //   this.receiverId = decodeURIComponent(rawId);
+    //   this.roomId = this.getRoomId(this.senderId, this.receiverId);
+    //   this.receiver_phone =
+    //     phoneFromQuery || localStorage.getItem('receiver_phone') || '';
+    //   localStorage.setItem('receiver_phone', this.receiver_phone);
+    // }
+
+    // this.setupTypingListener();
+
+    // await this.chatService.resetUnreadCount(this.roomId, this.senderId);
+    // await this.markMessagesAsRead();
+
+    // try {
+    //   const db = getDatabase();
+    //   try {
+    //     const myTypingRef = dbRef(db, `typing/${this.roomId}/${this.senderId}`);
+    //     onDisconnect(myTypingRef).remove();
+    //   } catch (err) {
+    //     console.warn('onDisconnect setup failed', err);
+    //   }
+
+    //   const tsub = this.typingInput$
+    //     .pipe(throttleTime(1200, undefined, { leading: true, trailing: true }))
+    //     .subscribe(() => {
+    //       this.sendTypingSignal();
+    //     });
+    //   this.typingRxSubs.push(tsub);
+    // } catch (err) {
+    //   console.warn('Typing setup error', err);
+    // }
+
+    // await this.loadFromLocalStorage();
+    // this.listenForMessages();
+    // this.setupPinnedMessageListener();
+    // this.checkMobileView();
+    // setTimeout(() => this.scrollToBottom(), 100);
+    // await this.loadInitialMessages();
+    // this.loadReceiverProfile();
+    // await this.checkIfBlocked();
+    // this.startReceiverStatusPoll();
   }
 
   onInputTyping() {
@@ -317,6 +382,69 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
+  // async ionViewWillEnter() {
+  //   // console.log({chatTitle})
+  //   // if (currentChat) {}
+  //   //    try {
+  //   //   this.pfUsersSub = this.chatService.platformUsers$.subscribe((users) => {
+  //   //     // Normalize fields to be consistent with what ContactsPage does
+  //   //     this.pfUsers = (users || []).map((u: any) => ({
+  //   //       userId: u.userId ?? u.user_id ?? u.id ?? null,
+  //   //       username: u.username ?? u.name ?? u.displayName ?? '',
+  //   //       phoneNumber: u.phoneNumber ?? u.phone_number ?? '',
+  //   //       avatar: u.avatar ?? u.profile ?? null,
+  //   //       // isOnPlatform: !!u.isOnPlatform ?? true,
+  //   //     }));
+  //   //     console.log("this.pfUsers",this.pfUsers)
+  //   //     // optional debug
+  //   //     // console.log('pfUsers updated', this.pfUsers);
+  //   //   });
+  //   // } catch (err) {
+  //   //   console.warn('Failed to subscribe to platform users', err);
+  //   // }
+  //   // const nameFromQuery =
+  //   //   this.route.snapshot.queryParamMap.get('receiver_name');
+  //   // this.receiver_name =
+  //   //   nameFromQuery ||
+  //   //   (await this.secureStorage.getItem('receiver_name')) ||
+  //   //   '';
+  //   // const rawId = this.route.snapshot.queryParamMap.get('receiverId') || '';
+  //   // const chatTypeParam = this.route.snapshot.queryParamMap.get('isGroup');
+  //   // const phoneFromQuery =
+  //   //   this.route.snapshot.queryParamMap.get('receiver_phone');
+  //   // this.chatType = chatTypeParam === 'true' ? 'group' : 'private';
+  //   // if (this.chatType === 'group') {
+  //   //   this.roomId = decodeURIComponent(rawId);
+  //   //   try {
+  //   //     const res = await this.chatService.fetchGroupWithProfiles(this.roomId);
+  //   //     if (!res) return;
+  //   //     const { groupName, groupMembers } = res;
+  //   //     this.groupName = groupName;
+  //   //     this.groupMembers = groupMembers;
+  //   //   } catch (err) {
+  //   //     console.warn('Failed to fetch group with profiles', err);
+  //   //     this.groupName = 'Group';
+  //   //     this.groupMembers = [];
+  //   //   }
+  //   //   this.setupTypingListener();
+  //   // } else {
+  //   //   this.receiverId = decodeURIComponent(rawId);
+  //   //   this.roomId = this.getRoomId(this.senderId, this.receiverId);
+  //   //   this.receiver_phone =
+  //   //     phoneFromQuery || localStorage.getItem('receiver_phone') || '';
+  //   //   localStorage.setItem('receiver_phone', this.receiver_phone);
+  //   // }
+  //   // await this.chatService.resetUnreadCount(this.roomId, this.senderId);
+  //   // await this.markMessagesAsRead();
+  //   // // await this.loadFromLocalStorage();
+  //   // // this.listenForMessages();
+  //   // const nav = this.router.getCurrentNavigation();
+  //   // const state = nav?.extras?.state;
+  //   // if (state && state['imageToSend']) {
+  //   //   this.attachmentPath = state['imageToSend'];
+  //   // }
+  //   // this.loadReceiverProfile();
+  // }
 
   async ionViewWillEnter() {
     await this.chatService.loadMessages();
@@ -327,21 +455,22 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
       )) as any[];
       // msgs.forEach((msg: any) => console.log({msg}));
       this.allMessage = msgs as IMessage[];
-
-       // Initialize showingEnglish flag for each message
-    this.allMessage.forEach(msg => {
-      msg.showingEnglish = false; // default: not show English
-    });
       for (const msg of msgs) {
         if (!msg.isMe) {
-          console.log('Marking read from chat screen');
+          // console.log('Marking read from chat screen');
           this.chatService.markAsRead(msg.msgId);
         }
       }
     });
 
+     this.presenceSubscription = this.chatService.presenceChanges$.subscribe(
+      (presenceMap) => {
+        this.updateReceiverStatus();
+      }
+    );
 
-
+    // Initial status check
+    this.updateReceiverStatus();
 
     //scroll to bottom pagination load messages
     const scrollElement = await this.ionContent.getScrollElement();
@@ -358,18 +487,19 @@ export class ChattingScreenPage implements OnInit, AfterViewInit, OnDestroy {
     this.senderId = this.authService.authData?.userId || '';
     this.sender_phone = this.authService.authData?.phone_number || '';
     this.sender_name = this.authService.authData?.name || '';
+    this.roomId = this.currentConv?.roomId || '';
     const currentChat = this.chatService.currentChat;
-    console.log({currentChat})
-  this.chatType = currentChat?.type || "";
+    console.log({ currentChat });
+    this.chatType = currentChat?.type || '';
 
-if (this.chatType === 'private') {
-  const parts: string[] = currentChat?.roomId?.split('_') || [];
-  this.receiverId =
-    parts.find((p: string | null) => p !== this.senderId) ??
-    parts[parts.length - 1];
-} else {
-  this.receiverId = currentChat?.roomId || '';
-}
+    if (this.chatType === 'private') {
+      const parts: string[] = currentChat?.roomId?.split('_') || [];
+      this.receiverId =
+        parts.find((p: string | null) => p !== this.senderId) ??
+        parts[parts.length - 1];
+    } else {
+      this.receiverId = currentChat?.roomId || '';
+    }
     this.receiverProfile =
       (currentChat as any).avatar || (currentChat as any).groupAvatar || null;
     this.chatTitle = currentChat?.title || null;
@@ -420,6 +550,11 @@ if (this.chatType === 'private') {
   getStatusIconDescriptorByMsgId(msgId: string): IconDescriptor | null {
     if (!msgId || !this.allMessage.length) return null;
 
+    // const messagesMap: Map<string, IMessage[]> = (this._messages$ as any).value;
+    // if (!messagesMap || !(messagesMap instanceof Map)) return null;
+
+    // linear search across rooms — fine for small-to-medium stores. See note below.
+    // for (const [, list] of messagesMap.entries()) {
     const msg = this.allMessage.find((m) => m.msgId === msgId);
     if (!msg?.isMe) {
       return null;
@@ -461,6 +596,128 @@ if (this.chatType === 'private') {
       default:
         return null;
     }
+  }
+
+ updateReceiverStatus() {
+    const currentChat = this.chatService.currentChat;
+    if (!currentChat) return;
+
+    // Get receiver ID
+    let receiverId: string;
+    if (currentChat.type === 'private') {
+      const parts = currentChat.roomId.split('_');
+      receiverId = parts.find((p) => p !== this.chatService['senderId']) ?? parts[1];
+    } else {
+      // For groups, handle multiple typing statuses
+      this.updateGroupTypingStatus();
+      return;
+    }
+
+    // Get presence status
+    const presence = this.chatService.getPresenceStatus(receiverId);
+    
+    if (presence) {
+      this.receiverStatus = presence.isOnline ? 'online' : 'offline';
+      this.isReceiverTyping = presence.isTyping || false; // 🆕
+      
+      if (!presence.isOnline && presence.lastSeen) {
+        this.lastSeenTime = this.formatLastSeen(presence.lastSeen);
+      }
+    }
+  }
+
+   updateGroupTypingStatus() {
+    const currentChat = this.chatService.currentChat;
+    if (!currentChat || currentChat.type !== 'group') return;
+
+    const members = currentChat.members || [];
+    let typingCount = 0;
+
+    members.forEach(memberId => {
+      if (memberId === this.chatService['senderId']) return;
+      const presence = this.chatService.getPresenceStatus(memberId);
+      if (presence?.isTyping) {
+        typingCount++;
+      }
+    });
+
+    this.typingCount = typingCount;
+  }
+
+  // 🆕 Call this when user types in the input
+  onMessageInput(event: any) {
+    const text = event.target.value || '';
+    
+    if (text.trim().length > 0) {
+      this.chatService.setTypingStatus(true);
+      
+      // Reset timeout
+      if (this.typingTimeout) {
+        clearTimeout(this.typingTimeout);
+      }
+      
+      // Auto-clear after 2 seconds of no typing
+      this.typingTimeout = setTimeout(() => {
+        this.chatService.setTypingStatus(false);
+      }, 2000);
+    } else {
+      this.chatService.setTypingStatus(false);
+    }
+  }
+
+formatLastSeen(timestamp: number): string {
+    const now = Date.now();
+    const diff = now - timestamp;
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+    
+    if (minutes < 1) return 'just now';
+    if (minutes < 60) return `${minutes}m ago`;
+    if (hours < 24) return `${hours}h ago`;
+    if (days < 7) return `${days}d ago`;
+    
+    return new Date(timestamp).toLocaleDateString();
+  }
+
+
+  // Alternative: More detailed format
+  formatLastSeenDetailed(timestamp: number): string {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diff = now.getTime() - date.getTime();
+    
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    
+    if (minutes < 1) return 'Last seen just now';
+    if (minutes < 60) return `Last seen ${minutes} minute${minutes > 1 ? 's' : ''} ago`;
+    if (hours < 24) return `Last seen ${hours} hour${hours > 1 ? 's' : ''} ago`;
+    
+    // Today
+    if (date.toDateString() === now.toDateString()) {
+      return `Last seen today at ${date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })}`;
+    }
+    
+    // Yesterday
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    if (date.toDateString() === yesterday.toDateString()) {
+      return `Last seen yesterday at ${date.toLocaleTimeString('en-US', { 
+        hour: '2-digit', 
+        minute: '2-digit' 
+      })}`;
+    }
+    
+    // Older
+    return `Last seen ${date.toLocaleDateString()} at ${date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    })}`;
   }
 
   loadReceiverProfile() {
@@ -695,9 +952,8 @@ if (this.chatType === 'private') {
         return;
       }
 
-      await this.chatService.deleteChatForUser(roomId, userId);
+      await this.chatService.clearChatForUser(roomId);
 
-      // Clear local messages array (UI ko refresh karne ke liye)
       this.messages = [];
 
       // Show success toast
@@ -708,7 +964,6 @@ if (this.chatType === 'private') {
       });
       await toast.present();
 
-      //console.log('✅ Chat cleared for user:', userId);
     } catch (error) {
       console.error('❌ Error clearing chat:', error);
 
@@ -998,6 +1253,7 @@ if (this.chatType === 'private') {
     if (this.selectedMessages.length > 0) {
       this.toggleSelection(msg);
       this.lastPressedMessage = msg;
+      // console.log("this.lastPressedMessage",this.lastPressedMessage)
     }
   }
 
@@ -1365,14 +1621,18 @@ if (this.chatType === 'private') {
 
   async onMore(ev?: Event) {
     const hasText = !!this.lastPressedMessage?.text;
+    console.log({ hasText });
     const hasAttachment = !!(
       this.lastPressedMessage?.attachment ||
       this.lastPressedMessage?.file ||
       this.lastPressedMessage?.image ||
       this.lastPressedMessage?.media
     );
+    // console.log({hasAttachment})
 
-    const isPinned = this.pinnedMessage?.key === this.lastPressedMessage?.key;
+    const isPinned =
+      this.pinnedMessage?.messageId === this.lastPressedMessage?.message_id;
+    // console.log({isPinned})
 
     const popover = await this.popoverController.create({
       component: MessageMorePopoverComponent,
@@ -1408,7 +1668,7 @@ if (this.chatType === 'private') {
         this.shareMessage();
         break;
       case 'pin':
-        this.pinMessage();
+        this.pinMessage(this.lastPressedMessage);
         break;
       case 'unpin':
         this.unpinMessage();
@@ -1435,21 +1695,15 @@ if (this.chatType === 'private') {
     }
 
     try {
-      // store selected message in the chat service (mirror of forward behaviour)
-      // Implement setSelectedMessageInfo in FirebaseChatService (see snippet below)
       this.chatService.setSelectedMessageInfo(msg);
 
       // clear UI selection state
       this.selectedMessages = [];
       this.lastPressedMessage = null;
 
-      // navigate to message-info page — you can choose queryParams or router state.
-      // I'll use the same approach you used for forward (route path), but pass the messageId/key
-      // so message-info page can fetch or read from chatService.
       this.router.navigate(['/message-info'], {
         queryParams: {
-          // pass a small identifier; page can request the full object from chatService
-          messageKey: msg.key || msg.message_id || '',
+          messageKey: msg.msgId || '',
         },
       });
     } catch (err) {
@@ -1463,7 +1717,7 @@ if (this.chatType === 'private') {
     }
   }
 
-  async editMessage(message: Message) {
+  async editMessage(message: IMessage) {
     const alert = await this.alertCtrl.create({
       header: 'Edit Message',
       inputs: [
@@ -1481,23 +1735,22 @@ if (this.chatType === 'private') {
         {
           text: 'Save',
           handler: async (data: any) => {
-            if (data.text && data.text.trim() !== '') {
-              const encryptedText = await this.encryptionService.encrypt(
-                data.text.trim()
+            const newText = data.text?.trim();
+            if (!newText) return;
+
+            try {
+              await this.chatService.editMessage(
+                this.roomId,
+                message.msgId,
+                newText
               );
 
-              const db = getDatabase();
-              const msgRef = ref(db, `chats/${this.roomId}/${message.key}`);
-
-              await update(msgRef, {
-                text: encryptedText,
-                isEdit: true,
-              });
-
-              message.text = data.text.trim();
+              message.text = newText;
               message.isEdit = true;
-
               this.lastPressedMessage = { ...message };
+              this.lastPressedMessage = [];
+            } catch (err) {
+              console.error('Failed to edit message:', err);
             }
           },
         },
@@ -1519,15 +1772,17 @@ if (this.chatType === 'private') {
     //console.log('Share clicked for attachment:', this.lastPressedMessage);
   }
 
-  pinMessage() {
+  pinMessage(message: IMessage) {
+    console.log('last pressed message ', this.lastPressedMessage);
     const pin: PinnedMessage = {
-      messageId: this.lastPressedMessage?.message_id as string,
-      key: this.lastPressedMessage?.key,
+      messageId: message.msgId as string,
+      // key: this.lastPressedMessage?.key,
       pinnedAt: Date.now(),
       pinnedBy: this.senderId,
       roomId: this.roomId,
       scope: 'global',
     };
+    console.log({ pin });
     this.chatService.pinMessage(pin);
     this.selectedMessages = [];
     this.lastPressedMessage = null;
@@ -1539,7 +1794,7 @@ if (this.chatType === 'private') {
       (pinnedMessage) => {
         this.pinnedMessage = pinnedMessage;
         if (pinnedMessage) {
-          this.findPinnedMessageDetails(pinnedMessage.key);
+          this.findPinnedMessageDetails(pinnedMessage.messageId);
         } else {
           this.pinnedMessageDetails = null;
         }
@@ -1547,7 +1802,7 @@ if (this.chatType === 'private') {
     );
   }
 
-  findPinnedMessageDetails(messageId: string) {
+  findPinnedMessageDetails(messageId: string | undefined) {
     for (const group of this.groupedMessages) {
       const foundMessage = group.messages.find(
         (msg) => msg.msgId === messageId
@@ -1560,7 +1815,10 @@ if (this.chatType === 'private') {
   }
 
   unpinMessage() {
+    console.log('this unpin message function before is called');
+    // console.log("this pinnedeMessage", message)
     if (this.pinnedMessage) {
+      console.log('this unpin message function after is called');
       this.chatService.unpinMessage(this.roomId);
       this.selectedMessages = [];
       this.lastPressedMessage = null;
@@ -1719,7 +1977,36 @@ if (this.chatType === 'private') {
     return message.msgId;
   }
 
-  
+  // async ngAfterViewInit() {
+  //   if (this.ionContent) {
+  //     this.ionContent.ionScroll.subscribe(async (event: any) => {
+  //       if (
+  //         event.detail.scrollTop < 20 &&
+  //         this.chatService.hasMoreMessages &&
+  //         !this.isLoadingMore
+  //       ) {
+  //         await this.chatService.loadMessages();
+  //         // await this.loadMoreMessages();
+  //       } else {
+  //         console.log('Not more messages');
+  //       }
+  //     });
+  //   }
+
+  //   this.setDynamicPadding();
+  //   window.addEventListener('resize', this.resizeHandler);
+
+  //   const footer = this.el.nativeElement.querySelector(
+  //     '.footer-fixed'
+  //   ) as HTMLElement;
+  //   if (footer && 'ResizeObserver' in window) {
+  //     const ro = new (window as any).ResizeObserver(() =>
+  //       this.setDynamicPadding()
+  //     );
+  //     ro.observe(footer);
+  //     (this as any)._ro = ro;
+  //   }
+  // }
 
   //new this method used in pagination
   async ngAfterViewInit() {
@@ -1821,7 +2108,124 @@ if (this.chatType === 'private') {
   }
 
   async listenForMessages() {
-  
+    // this.messageSub?.unsubscribe();
+    // this.messageSub = this.chatService
+    //   .getMessages()
+    //   .subscribe(async (newMessages: any) => {
+    //     if (!Array.isArray(newMessages)) return;
+    //     const decryptPromises = newMessages.map((msg) =>
+    //       this.encryptionService
+    //         .decrypt(msg.text || '')
+    //         .then((dt) => ({ msg, decryptedText: dt }))
+    //         .catch((err) => {
+    //           console.warn('decrypt msg.text failed for key', msg.key, err);
+    //           return { msg, decryptedText: '' };
+    //         })
+    //     );
+    //     const decryptedPairs = await Promise.all(decryptPromises);
+    //     const existingById: Record<string, number> = {};
+    //     this.allMessages.forEach((m, i) => {
+    //       if (m.msgId) existingById[String(m.msgId)] = i;
+    //     });
+    //     for (const pair of decryptedPairs) {
+    //       const msg = pair.msg;
+    //       const serverKey = msg.key || null;
+    //       const messageId = msg.message_id || uuidv4();
+    //       const dm: Message = {
+    //         ...msg,
+    //         key: serverKey,
+    //         message_id: messageId,
+    //         text: pair.decryptedText,
+    //         reactions: msg.reactions || {}, // ✅ Ensure reactions are included
+    //       };
+    //       if (dm.attachment && (dm.attachment as any).caption) {
+    //         try {
+    //           const encCap = (dm.attachment as any).caption;
+    //           if (encCap && typeof encCap === 'string') {
+    //             const captionPlain = await this.encryptionService.decrypt(
+    //               encCap
+    //             );
+    //             (dm.attachment as any).caption = captionPlain;
+    //           }
+    //         } catch (err) {
+    //           console.warn(
+    //             'Failed to decrypt attachment.caption for message_id',
+    //             messageId,
+    //             err
+    //           );
+    //         }
+    //       }
+    //       if (this.applyDeletionFilters(dm)) {
+    //         if (existingById[String(messageId)] !== undefined) {
+    //           const idx = existingById[String(messageId)];
+    //           this.allMessages[idx] = { ...this.allMessages[idx], ...dm };
+    //         }
+    //         continue;
+    //       }
+    //       const existingIndex = existingById[String(messageId)];
+    //       if (existingIndex !== undefined) {
+    //         const old = this.allMessages[existingIndex];
+    //         const merged: Message = {
+    //           ...old,
+    //           ...dm,
+    //           key: dm.key || old.key,
+    //           reactions: dm.reactions || old.reactions || {}, // ✅ Merge reactions
+    //         };
+    //         if ((old as any).localOnly !== undefined)
+    //           (merged as any).localOnly = (old as any).localOnly;
+    //         if ((old as any).isLocallyEdited !== undefined)
+    //           (merged as any).isLocallyEdited = (old as any).isLocallyEdited;
+    //         this.allMessages[existingIndex] = merged;
+    //       } else {
+    //         this.allMessages.push(dm);
+    //         existingById[String(messageId)] = this.allMessages.length - 1;
+    //       }
+    //       if (dm.receiver_id === this.senderId && !dm.read) {
+    //         try {
+    //           await this.chatService.markRead(this.roomId, dm.key);
+    //           await this.chatService.resetUnreadCount(
+    //             this.roomId,
+    //             this.senderId
+    //           );
+    //         } catch (err) {
+    //           console.warn('markRead/resetUnreadCount failed', err);
+    //         }
+    //       }
+    //     }
+    //     const seenIds: Record<string, boolean> = {};
+    //     this.allMessages = this.allMessages.filter((m) => {
+    //       const id = String(m.message_id || '');
+    //       if (!id) return true;
+    //       if (seenIds[id]) return false;
+    //       seenIds[id] = true;
+    //       return true;
+    //     });
+    //     this.allMessages.sort((a, b) => {
+    //       const ta =
+    //         Number(a.timestamp) || new Date(a.timestamp || 0).getTime();
+    //       const tb =
+    //         Number(b.timestamp) || new Date(b.timestamp || 0).getTime();
+    //       return ta - tb;
+    //     });
+    //     const visibleAllMessages = this.allMessages.filter(
+    //       (m) => !this.applyDeletionFilters(m)
+    //     );
+    //     const keepCount = Math.max(
+    //       this.limit || 50,
+    //       this.displayedMessages?.length || 0
+    //     );
+    //     const startIdx = Math.max(0, visibleAllMessages.length - keepCount);
+    //     this.displayedMessages = visibleAllMessages.slice(startIdx);
+    //     this.groupedMessages = await this.groupMessagesByDate(
+    //       this.displayedMessages
+    //     );
+    //     this.saveToLocalStorage();
+    //     if (this.pinnedMessage) {
+    //       this.findPinnedMessageDetails(this.pinnedMessage.key);
+    //     }
+    //     await Promise.resolve();
+    //     this.scrollToBottom();
+    //   });
     this.observeVisibleMessages();
   }
 
@@ -1834,11 +2238,6 @@ if (this.chatType === 'private') {
       await this.chatService.markRead(this.roomId, msg.key);
     }
   }
-
-toggleLanguage(msg: any) {
-  msg.showingEnglish = !msg.showingEnglish;
-}
-
 
   observeVisibleMessages() {
     const allMessageElements = document.querySelectorAll('[data-msg-key]');
@@ -2123,258 +2522,79 @@ toggleLanguage(msg: any) {
     this.replyToMessage = message;
   }
 
- 
+  async sendMessage() {
+    if (this.isSending) return;
 
-async sendMessage() {
-  if (this.isSending) return;
+    this.isSending = true;
 
-  // Determine the UI text and whether we have original saved
-  const currentTextUI = (this.messageText || '').trim();
+    try {
+      const plainText = this.messageText.trim();
+      const localMessage: Partial<IMessage & { attachment?: IAttachment }> = {
+        sender: this.senderId,
+        text: plainText,
+        timestamp: Date.now(),
+        msgId: uuidv4(),
+        replyToMsgId: this.replyTo?.message.msgId || '',
+        isEdit: false,
+        type: 'text',
+        reactions: [],
+      };
 
-  // If nothing to send (no text and no attachment) -> bail
-  if (!currentTextUI && !this.selectedAttachment) return;
+      if (this.selectedAttachment) {
+        try {
+          const mediaId = await this.uploadAttachmentToS3(
+            this.selectedAttachment
+          );
 
-  this.isSending = true;
+          localMessage.attachment = {
+            type: this.selectedAttachment.type,
+            mediaId: mediaId,
+            fileName: this.selectedAttachment.fileName,
+            mimeType: this.selectedAttachment.mimeType,
+            fileSize: this.selectedAttachment.fileSize,
+            caption: plainText,
+          };
 
-  try {
-    // base message object (partial)
-    const localMessage: Partial<IMessage & { attachment?: any }> = {
-      msgId: uuidv4(),
-      roomId: this.roomId, // ensure you have roomId in component
-      sender: this.senderId,
-      type: 'text',
-      text: '', // will set below according to translation state
-      timestamp: Date.now(),
-      replyToMsgId: this.replyTo?.message.msgId || '',
-      isEdit: false,
-      reactions: [],
-      isTranslated: false,
-      translatedIn: '',
-      translatedText: '',
-      status: 'pending',
-    };
-
-    // If the message was translated (UI shows translated text and originalEnglishMessage exists),
-    // pack according to the schema:
-    // IMessage.text -> original (English), IMessage.translatedText -> translated version
-    if (this.wasTranslated && this.originalEnglishMessage) {
-      localMessage.text = this.originalEnglishMessage;               // original English source
-      localMessage.translatedText = currentTextUI;                  // translated text shown to user
-      localMessage.isTranslated = true;
-      localMessage.translatedIn = this.translatedLanguage || this.languageName(this.appLanguage);
-    } else {
-      // Not translated: send typed text as original
-      localMessage.text = currentTextUI;
-      localMessage.isTranslated = false;
-      localMessage.translatedText = '';
-      localMessage.translatedIn = '';
-    }
-
-    // If there is an attachment, upload and attach metadata (preserve caption as text)
-    if (this.selectedAttachment) {
-      try {
-        const mediaId = await this.uploadAttachmentToS3(this.selectedAttachment);
-
-        localMessage.type = this.selectedAttachment.type || 'other';
-        localMessage.mediaId = mediaId;
-        localMessage.localUrl = undefined; // optional
-        localMessage.cdnUrl = undefined; // optional depending on your upload
-        // you can keep a caption inside text for the message
-        localMessage.text = localMessage.text || ''; // ensure not undefined
-
-        // If you previously stored attachment in an object
-        localMessage['attachment'] = {
-          type: this.selectedAttachment.type,
-          mediaId,
-          fileName: this.selectedAttachment.fileName,
-          mimeType: this.selectedAttachment.mimeType,
-          fileSize: this.selectedAttachment.fileSize,
-          caption: currentTextUI, // caption is same as what user typed/translated
-        };
-
-        // Save to sent folder (your existing FileService)
-        await this.FileService.saveFileToSent(
-          this.selectedAttachment.fileName,
-          this.selectedAttachment.blob
-        );
-      } catch (err) {
-        console.error('Failed to upload attachment:', err);
-        const toast = await this.toastCtrl.create({
-          message: 'Failed to upload attachment. Please try again.',
-          duration: 3000,
-          color: 'danger',
-        });
-        await toast.present();
-        return;
+          const file_path = await this.FileService.saveFileToSent(
+            this.selectedAttachment.fileName,
+            this.selectedAttachment.blob
+          );
+        } catch (error) {
+          console.error('Failed to upload attachment:', error);
+          const toast = await this.toastCtrl.create({
+            message: 'Failed to upload attachment. Please try again.',
+            duration: 3000,
+            color: 'danger',
+          });
+          await toast.present();
+          return;
+        }
       }
+
+      await this.chatService.sendMessage(localMessage);
+      // clear UI state
+      this.messageText = '';
+      this.selectedAttachment = null;
+      this.showPreviewModal = false;
+      this.replyToMessage = null;
+      await this.stopTypingSignal();
+      this.scrollToBottom();
+       this.chatService.setTypingStatus(false);
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
     }
-
-    // send message (your chatService expects a Partial<IMessage> or similar)
-    await this.chatService.sendMessage(localMessage as IMessage);
-
-    // clear UI state
-    this.messageText = '';
-    this.originalEnglishMessage = null;
-    this.wasTranslated = false;
-    this.translatedLanguage = '';
-    this.selectedAttachment = null;
-    this.showPreviewModal = false;
-    this.replyToMessage = null;
-    await this.stopTypingSignal();
-    this.scrollToBottom();
-  } catch (error) {
-    console.error('Error sending message:', error);
-    const toast = await this.toastCtrl.create({
-      message: 'Failed to send message. Please try again.',
-      duration: 3000,
-      color: 'danger',
-    });
-    await toast.present();
-  } finally {
-    this.isSending = false;
+    } catch (error) {
+      console.error('Error sending message:', error);
+      const toast = await this.toastCtrl.create({
+        message: 'Failed to send message. Please try again.',
+        duration: 3000,
+        color: 'danger',
+      });
+      await toast.present();
+    } finally {
+      this.isSending = false;
+    }
   }
-}
-
-originalEnglishMessage: string | null = null; // stores original English before translation
-translatedLanguage: string = ''; // human readable language name (e.g., 'Hindi')
-appLanguage: string = 'fa-IR'; // user preferred target language code; set this from user settings
-wasTranslated: boolean = false; // true if current messageText is translated
-isTranslating: boolean = false; // show spinner / disable translate while in progress
-
-// change this to your script URL (keep the ?text & ?lang scheme)
-translationApiBase =
-  'https://script.google.com/macros/s/AKfycbz-X8ZFe5VFDPq0rRBdL65OrIghLFEw3yQXQiS03sQohoGo_cMpx8l27OCmtQpyFkz_/exec';
-
-// --- full supported languages map (for readable display) ---
-languageMap: Record<string, string> = {
-  'ar-EG': 'Arabic (Egypt)',
-  'ar-SA': 'Arabic (Saudi Arabia)',
-  'bn-BD': 'Bengali (Bangladesh)',
-  'de-DE': 'German (Germany)',
-  'en-GB': 'English (UK)',
-  'en-IN': 'English (India)',
-  'en-US': 'English (US)',
-  'es-ES': 'Spanish (Spain)',
-  'es-MX': 'Spanish (Mexico)',
-  'fa-IR': 'Persian (Iran)',
-  'fr-FR': 'French (France)',
-  'gu-IN': 'Gujarati (India)',
-  'hi-IN': 'Hindi (India)',
-  'it-IT': 'Italian (Italy)',
-  'ja-JP': 'Japanese',
-  'ko-KR': 'Korean',
-  'mr-IN': 'Marathi (India)',
-  'pa-IN': 'Punjabi (India)',
-  'pt-BR': 'Portuguese (Brazil)',
-  'pt-PT': 'Portuguese (Portugal)',
-  'ru-RU': 'Russian',
-  'ta-IN': 'Tamil (India)',
-  'te-IN': 'Telugu (India)',
-  'th-TH': 'Thai',
-  'tr-TR': 'Turkish',
-  'ur-PK': 'Urdu (Pakistan)',
-  'vi-VN': 'Vietnamese',
-  'zh-CN': 'Chinese (Simplified)',
-  'zh-TW': 'Chinese (Traditional)',
-};
-
-// --- helper: map locale code to readable name ---
-languageName(code: string): string {
-  return this.languageMap[code] || code;
-}
-
-// --- helper: normalize to API base language code ---
-apiLanguageCode(localeCode: string): string {
-  // handle special cases or extract main language
-  if (localeCode === 'zh-TW') return 'zh-TW';
-  if (localeCode === 'zh-CN') return 'zh';
-  return localeCode.split('-')[0]; // e.g., 'hi-IN' -> 'hi'
-}
-
-async translateMessage() {
-  if (this.isTranslating) return;
-
-  const typed = (this.messageText || '').trim();
-  if (!typed) {
-    const t = await this.toastCtrl.create({
-      message: 'Type a message to translate',
-      duration: 2000,
-      color: 'medium',
-    });
-    await t.present();
-    return;
-  }
-
-  // Save original English only if not already saved or user edited
-  if (!this.originalEnglishMessage || !this.wasTranslated) {
-    this.originalEnglishMessage = typed;
-  }
-const savedLang = localStorage.getItem('app_language');
-  if (savedLang) {
-    this.appLanguage = savedLang;
-  }
-  // 🛑 Skip translation if target language is English
-  const langCode = this.apiLanguageCode(this.appLanguage);
-  if (langCode === 'en') {
-    this.messageText = this.originalEnglishMessage;
-    this.wasTranslated = false;
-    this.translatedLanguage = 'English';
-    const toast = await this.toastCtrl.create({
-      message: 'Target language is English — no translation needed.',
-      duration: 2000,
-      color: 'medium',
-    });
-    await toast.present();
-    return;
-  }
-
-  // Proceed with normal translation flow
-  this.isTranslating = true;
-  try {
-    const encoded = encodeURIComponent(this.originalEnglishMessage);
-    const url = `${this.translationApiBase}?text=${encoded}&lang=${langCode}`;
-
-    const resp = await fetch(url, { method: 'GET' });
-    if (!resp.ok) throw new Error(`Translation API error ${resp.status}`);
-    const data = await resp.json();
-
-    const translated = data?.t ?? data?.translatedText ?? null;
-    if (!translated) throw new Error('Invalid translation response');
-
-    this.messageText = translated;
-    this.wasTranslated = true;
-    this.translatedLanguage = this.languageName(this.appLanguage);
-  } catch (err) {
-    console.error('translateMessage error', err);
-    const toast = await this.toastCtrl.create({
-      message: 'Translation failed. Try again.',
-      duration: 3000,
-      color: 'danger',
-    });
-    await toast.present();
-  } finally {
-    this.isTranslating = false;
-  }
-}
-
-
-// --- clearTranslation(): revert to English before send ---
-clearTranslation() {
-  if (this.originalEnglishMessage) {
-    this.messageText = this.originalEnglishMessage;
-  }
-  this.wasTranslated = false;
-  this.translatedLanguage = '';
-  // keep originalEnglishMessage so user can still send or re-translate if desired
-}
-
-
-// Optional: allow user to explicitly discard original
-discardSavedOriginal() {
-  this.originalEnglishMessage = null;
-  this.wasTranslated = false;
-  this.translatedLanguage = '';
-}
 
   //user online or offline logic
   startReceiverStatusPoll(pollIntervalMs = 30000) {
@@ -2402,33 +2622,33 @@ discardSavedOriginal() {
       : null;
   }
 
-  formatLastSeen(ts: string | null) {
-    if (!ts) return '';
-    const d = new Date(ts); // make sure server returns parseable ISO or 'YYYY-MM-DD hh:mm:ss'
-    // simple formatting — adjust to locale
-    const now = new Date();
-    const sameDay = d.toDateString() === now.toDateString();
-    if (sameDay) {
-      return `Today at, ${d.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      })}`;
-    }
-    const yesterday = new Date();
-    yesterday.setDate(now.getDate() - 1);
-    if (d.toDateString() === yesterday.toDateString()) {
-      return `Yesterday, ${d.toLocaleTimeString([], {
-        hour: '2-digit',
-        minute: '2-digit',
-      })}`;
-    }
-    return d.toLocaleString([], {
-      day: 'numeric',
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
+  // formatLastSeen(ts: string | null) {
+  //   if (!ts) return '';
+  //   const d = new Date(ts); // make sure server returns parseable ISO or 'YYYY-MM-DD hh:mm:ss'
+  //   // simple formatting — adjust to locale
+  //   const now = new Date();
+  //   const sameDay = d.toDateString() === now.toDateString();
+  //   if (sameDay) {
+  //     return `Today at, ${d.toLocaleTimeString([], {
+  //       hour: '2-digit',
+  //       minute: '2-digit',
+  //     })}`;
+  //   }
+  //   const yesterday = new Date();
+  //   yesterday.setDate(now.getDate() - 1);
+  //   if (d.toDateString() === yesterday.toDateString()) {
+  //     return `Yesterday, ${d.toLocaleTimeString([], {
+  //       hour: '2-digit',
+  //       minute: '2-digit',
+  //     })}`;
+  //   }
+  //   return d.toLocaleString([], {
+  //     day: 'numeric',
+  //     month: 'short',
+  //     hour: '2-digit',
+  //     minute: '2-digit',
+  //   });
+  // }
 
   private async uploadAttachmentToS3(attachment: any): Promise<string> {
     try {
@@ -2708,14 +2928,57 @@ discardSavedOriginal() {
     msg: IMessage,
     badge: { emoji: string | null; userId: string }
   ) {
-    
+    // ev.stopPropagation();
+    // // Build header text: "1 reaction" / "3 reactions"
+    // const header =
+    //   badge.count === 1 ? '1 reaction' : `${badge.count} reactions`;
+    // // If badge.mine === true, show the remove option; else show only view
+    // const buttons: any[] = [];
+    // // Show the emoji/count as a disabled info row
+    // buttons.push({
+    //   text: `${badge.emoji}  ${badge.count}`,
+    //   icon: undefined,
+    //   role: undefined,
+    //   handler: () => {
+    //     /* noop - disabled by setting css or no-op here */
+    //   },
+    //   cssClass: 'reaction-info-button',
+    // });
+    // // If the current user reacted with this emoji, show "Tap to remove"
+    // if (badge.mine) {
+    //   buttons.push({
+    //     text: 'Tap to remove',
+    //     icon: 'trash',
+    //     handler: async () => {
+    //       // call existing addReaction which toggles/remove when same emoji present
+    //       // await this.addReaction(msg, badge.emoji);
+    //     },
+    //   });
+    // } else {
+    //   // Optionally allow user to react with this same emoji (i.e., add their reaction)
+    //   buttons.push({
+    //     text: `React with ${badge.emoji}`,
+    //     icon: undefined,
+    //     handler: async () => {
+    //       // await this.addReaction(msg, badge.emoji);
+    //     },
+    //   });
+    // }
+    // // Cancel button
+    // buttons.push({ text: 'Cancel', role: 'cancel' });
+    // const sheet = await this.actionSheetCtrl.create({
+    //   header,
+    //   buttons,
+    //   cssClass: 'reaction-action-sheet',
+    // });
+    // await sheet.present();
   }
 
   goToProfile() {
     // const isGroup = this.chatType === 'group';
     const queryParams: any = {
       receiverId: this.receiverId,
-      isGroup: this.chatType === 'group' ? 'true' : 'false'
+      isGroup: this.chatType === 'group' ? 'true' : 'false',
     };
 
     this.router.navigate(['/profile-screen'], { queryParams });
@@ -2811,6 +3074,11 @@ discardSavedOriginal() {
     });
     this.onValueUnsubs = [];
     this.statusPollSub?.unsubscribe();
+
+     this.presenceSubscription?.unsubscribe();
+    if (this.typingTimeout) {
+      clearTimeout(this.typingTimeout);
+    }
   }
 
   private isGestureNavigation(): boolean {
