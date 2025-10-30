@@ -57,6 +57,7 @@ import { AuthService } from '../auth/auth.service';
 interface MemberPresence {
   isOnline: boolean;
   lastSeen: number | null;
+  isTyping?: boolean;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -91,6 +92,12 @@ export class FirebaseChatService {
 
   currentChat: IConversation | null = null;
 
+  private _presenceSubject$ = new BehaviorSubject<Map<string, MemberPresence>>(new Map());
+presenceChanges$ = this._presenceSubject$.asObservable();
+
+  private _typingStatus$ = new BehaviorSubject<Map<string, boolean>>(new Map());
+  typingStatus$ = this._typingStatus$.asObservable();
+
   constructor(
     private db: Database,
     private service: ApiService,
@@ -101,7 +108,7 @@ export class FirebaseChatService {
     private networkService: NetworkService,
     private encryptionService: EncryptionService,
     private authService: AuthService
-  ) { }
+  ) {}
 
   private isWeb(): boolean {
     return (
@@ -158,7 +165,56 @@ export class FirebaseChatService {
 
   private presenceCleanUp: any = null;
 
-  async openChat(chat: any, isNew: boolean = false) {
+   listenToTypingStatus(roomId: string, userId: string): () => void {
+    const typingRef = ref(this.db, `typing/${roomId}/${userId}`);
+    
+    const unsubscribe = onValue(typingRef, (snap) => {
+      const isTyping = snap.val() || false;
+      
+      // Update the membersPresence map with typing status
+      const currentPresence = this.membersPresence.get(userId);
+      if (currentPresence) {
+        this.membersPresence.set(userId, {
+          ...currentPresence,
+          isTyping
+        });
+      } else {
+        this.membersPresence.set(userId, {
+          isOnline: false,
+          lastSeen: null,
+          isTyping
+        });
+      }
+      
+      // Also update the typing status map
+      const current = new Map(this._typingStatus$.value);
+      current.set(userId, isTyping);
+      this._typingStatus$.next(current);
+      
+      // Emit presence update
+      this._presenceSubject$.next(new Map(this.membersPresence));
+    });
+
+    return unsubscribe;
+  }
+
+  // 🆕 Method to set your own typing status
+  setTypingStatus(isTyping: boolean, roomId?: string) {
+    const targetRoomId = roomId || this.currentChat?.roomId;
+    if (!targetRoomId || !this.senderId) return;
+
+    const typingRef = ref(this.db, `typing/${targetRoomId}/${this.senderId}`);
+    set(typingRef, isTyping);
+
+    // Auto-clear typing after 3 seconds of inactivity
+    if (isTyping) {
+      setTimeout(() => {
+        set(typingRef, false);
+      }, 3000);
+    }
+  }
+
+   async openChat(chat: any, isNew: boolean = false) {
     let conv: any = null;
     if (isNew) {
       const { receiver }: { receiver: IUser } = chat;
@@ -178,6 +234,7 @@ export class FirebaseChatService {
     } else {
       conv = this.currentConversations.find((c) => c.roomId === chat.roomId);
     }
+    
     let memberIds: string[] = [];
     if (conv.type === 'private') {
       const parts = conv.roomId.split('_');
@@ -188,9 +245,31 @@ export class FirebaseChatService {
     } else {
       memberIds = (conv as IConversation).members || [];
     }
+    
     this.currentChat = { ...(conv as IConversation) };
 
+    // Setup presence listener
     this.presenceCleanUp = this.isReceiverOnline(memberIds);
+
+    // 🆕 Setup typing listener for each member
+    const typingUnsubscribers: (() => void)[] = [];
+    for (const memberId of memberIds) {
+      if (memberId !== this.senderId) {
+        const unsub = this.listenToTypingStatus(conv.roomId, memberId);
+        typingUnsubscribers.push(unsub);
+      }
+    }
+
+    // 🆕 Store typing cleanup functions
+    const originalCleanup = this.presenceCleanUp;
+    this.presenceCleanUp = () => {
+      originalCleanup?.();
+      typingUnsubscribers.forEach(unsub => {
+        try {
+          unsub();
+        } catch (e) {}
+      });
+    };
 
     this._roomMessageListner = this.listenRoomStream(conv?.roomId as string, {
       onAdd: async (msgKey, data, isNew) => {
@@ -212,26 +291,31 @@ export class FirebaseChatService {
     this.setUnreadCount();
   }
 
-  async setUnreadCount(roomId: string | null = null, count: number = 0) {
-    const metaRef = rtdbRef(
+   async setUnreadCount(roomId : string | null = null, count : number = 0){
+     const metaRef = rtdbRef(
       this.db,
       `userchats/${this.senderId}/${roomId || this.currentChat?.roomId}`
     );
     rtdbUpdate(metaRef, { unreadCount: count });
   }
 
-  async closeChat() {
+    async closeChat() {
     try {
+      // Clear your own typing status
+      if (this.currentChat?.roomId) {
+        this.setTypingStatus(false, this.currentChat.roomId);
+      }
+
       if (this._roomMessageListner) {
         try {
           this._roomMessageListner();
-        } catch (error) { }
+        } catch (error) {}
         this._roomMessageListner = null;
       }
       if (this.presenceCleanUp) {
         try {
           this.presenceCleanUp();
-        } catch (error) { }
+        } catch (error) {}
         this.presenceCleanUp = null;
       }
       this.currentChat = null;
@@ -268,7 +352,7 @@ export class FirebaseChatService {
       }
 
       const pfUsers = await this.contactsyncService.getMatchedUsers();
-      console.log({ pfUsers })
+      console.log({pfUsers})
       await this.sqliteService.upsertContacts(pfUsers);
       this._deviceContacts$.next([...normalizedContacts]);
       this._platformUsers$.next([...pfUsers]);
@@ -293,7 +377,7 @@ export class FirebaseChatService {
         this._platformUsers$.next([]);
       }
     }
-    finally {
+    finally{
       // this.syncReceipt();
       // console.log("this finally block called")
     }
@@ -311,8 +395,6 @@ export class FirebaseChatService {
         return;
       }
 
-      // 📝 This acts like "onConnect"
-      // First, register the onDisconnect hook with the server
       onDisconnect(userStatusRef)
         .set({
           isOnline: false,
@@ -337,7 +419,7 @@ export class FirebaseChatService {
       ? memberIds.filter(Boolean)
       : [memberIds].filter(Boolean);
 
-    if (!ids.length) return () => { };
+    if (!ids.length) return () => {};
 
     // Ensure tracking maps exist
     this._memberUnsubs ??= new Map<string, () => void>();
@@ -351,7 +433,7 @@ export class FirebaseChatService {
       if (!ids.includes(existingId)) {
         try {
           unsub?.();
-        } catch { }
+        } catch {}
         this._memberUnsubs.delete(existingId);
         this.membersPresence.delete(existingId);
       }
@@ -364,24 +446,44 @@ export class FirebaseChatService {
       this.membersPresence.set(id, { isOnline: false, lastSeen: null });
       const userStatusRef = ref(this.db, `presence/${id}`);
 
+      // const unsubscribe = onValue(userStatusRef, (snap) => {
+      //   const val = snap.val() ?? {};
+      //   const isOnline = !!val.isOnline;
+
+      //   // Support different timestamp keys
+      //   const ts =
+      //     val.lastSeen ??
+      //     val.last_changed ??
+      //     val.last_changed_at ??
+      //     val.timestamp;
+      //   const lastSeen =
+      //     typeof ts === 'number' ? ts : ts ? Number(ts) || null : null;
+
+      //   this.membersPresence.set(id, { isOnline, lastSeen });
+      //   console.log(this.membersPresence);
+      //   // Optionally trigger an observable update:
+      //   // this.membersPresenceSubject?.next(this.membersPresence);
+      // });
+
       const unsubscribe = onValue(userStatusRef, (snap) => {
-        const val = snap.val() ?? {};
-        const isOnline = !!val.isOnline;
+  const val = snap.val() ?? {};
+  const isOnline = !!val.isOnline;
 
-        // Support different timestamp keys
-        const ts =
-          val.lastSeen ??
-          val.last_changed ??
-          val.last_changed_at ??
-          val.timestamp;
-        const lastSeen =
-          typeof ts === 'number' ? ts : ts ? Number(ts) || null : null;
+  const ts =
+    val.lastSeen ??
+    val.last_changed ??
+    val.last_changed_at ??
+    val.timestamp;
+  const lastSeen =
+    typeof ts === 'number' ? ts : ts ? Number(ts) || null : null;
 
-        this.membersPresence.set(id, { isOnline, lastSeen });
-        console.log(this.membersPresence);
-        // Optionally trigger an observable update:
-        // this.membersPresenceSubject?.next(this.membersPresence);
-      });
+  this.membersPresence.set(id, { isOnline, lastSeen });
+  
+  // 🆕 Emit the updated presence map
+  this._presenceSubject$.next(new Map(this.membersPresence));
+  
+  console.log(this.membersPresence);
+});
 
       this._memberUnsubs.set(id, unsubscribe);
     }
@@ -391,12 +493,28 @@ export class FirebaseChatService {
       for (const [id, unsub] of this._memberUnsubs.entries()) {
         try {
           unsub?.();
-        } catch { }
+        } catch {}
       }
       this._memberUnsubs.clear();
       this.membersPresence.clear();
     };
   }
+
+getPresenceStatus(userId: string): MemberPresence | null {
+  return this.membersPresence.get(userId) || null;
+}
+
+getPresenceObservable(): Observable<Map<string, MemberPresence>> {
+
+  const presenceSubject = new BehaviorSubject<Map<string, MemberPresence>>(
+    new Map(this.membersPresence)
+  );
+  
+  // You'll need to add this property to your class
+  // private _presenceSubject$ = new BehaviorSubject<Map<string, MemberPresence>>(new Map());
+  
+  return presenceSubject.asObservable();
+}
 
   async updateMessageStatusFromReceipts(msg: IMessage) {
     if (!msg.receipts || !this.currentChat?.members) return;
@@ -448,7 +566,7 @@ export class FirebaseChatService {
     console.warn('UI updated');
   }
 
-  async markAsRead(msgId: string, roomId: string | null = null) {
+  async markAsRead(msgId: string , roomId : string | null = null) {
     try {
       if (!this.senderId || !msgId) return;
 
@@ -480,10 +598,10 @@ export class FirebaseChatService {
       console.error('markAsRead error:', error);
     }
   }
-  async markAsDelivered(msgId: string, userID: string | null = null, roomId: string | null = null) {
+  async markAsDelivered(msgId: string,userID : string | null = null, roomId: string | null = null) {
     try {
       if (!msgId) {
-        console.log({ roomId: this.currentChat?.roomId });
+        console.log({  roomId: this.currentChat?.roomId });
         return;
       }
       const userId = userID || this.senderId
@@ -518,17 +636,17 @@ export class FirebaseChatService {
     }
   }
 
-  async setQuickReaction({ msgId, userId, emoji }: { msgId: string, userId: string, emoji: string | null }) {
+  async setQuickReaction({msgId,userId,emoji}:{msgId : string,userId : string, emoji : string | null}){
     const messageRef = rtdbRef(this.db, `chats/${this.currentChat?.roomId}/${msgId}/reactions`)
-    const snap = await rtdbGet(messageRef)
+    const snap =await rtdbGet(messageRef)
     const reactions = (snap.val() || []) as IMessage["reactions"]
-    const idx = reactions.findIndex(r => r.userId == userId)
-    if (idx > -1) {
-      reactions[idx] = { ...reactions[idx], emoji }
-    } else {
-      reactions.push({ userId, emoji })
+    const idx = reactions.findIndex(r=> r.userId == userId)
+    if(idx>-1){
+      reactions[idx] = {...reactions[idx],emoji}
+    }else{
+      reactions.push({userId, emoji})
     }
-    rtdbSet(messageRef, reactions)
+    rtdbSet(messageRef,reactions)
     // rtdbUpdate(messageRef,reactions)
   }
 
@@ -651,7 +769,7 @@ export class FirebaseChatService {
     const groupSnap = await rtdbGet(groupRef);
     const group: Partial<IGroup> = groupSnap.val() || {};
     const membersObj: Record<string, Partial<IGroupMember>> = group.members ||
-      {};
+    {};
     const members = Object.keys(membersObj);
 
     let decryptedText: string | undefined;
@@ -683,8 +801,8 @@ export class FirebaseChatService {
       updatedAt: meta.lastmessageAt
         ? this.parseDate(meta.lastmessageAt)
         : group.updatedAt
-          ? this.parseDate(group.updatedAt)
-          : undefined,
+        ? this.parseDate(group.updatedAt)
+        : undefined,
     } as IConversation;
 
     return conv;
@@ -747,7 +865,7 @@ export class FirebaseChatService {
       if (this._userChatsListener) {
         try {
           this._userChatsListener();
-        } catch { }
+        } catch {}
         this._userChatsListener = null;
       }
       const onUserChatsChange = async (snap: DataSnapshot) => {
@@ -829,7 +947,7 @@ export class FirebaseChatService {
             console.error('onUserChatsChange inner error for', roomId, e);
           }
         }
-        this.syncReceipt(current.filter(c => (c.unreadCount || 0) > 0).map(c => ({ roomId: c.roomId, unreadCount: c.unreadCount as number })))
+        this.syncReceipt(current.filter(c => (c.unreadCount || 0)>0).map(c=>({roomId : c.roomId, unreadCount: c.unreadCount as number})))
         this._conversations$.next(current);
       };
 
@@ -837,7 +955,7 @@ export class FirebaseChatService {
       this._userChatsListener = () => {
         try {
           unsubscribe();
-        } catch { }
+        } catch {}
       };
     } catch (error) {
       console.error('syncConversationWithServer error:', error);
@@ -846,29 +964,29 @@ export class FirebaseChatService {
     }
   }
 
-  async syncReceipt(convs: { roomId: string, unreadCount: number }[]) {
+  async syncReceipt(convs : {roomId : string, unreadCount : number}[]){
     try {
-      console.log("before", this._conversations$.value)
-      if (!convs.length) return;
+      console.log("before",this._conversations$.value)
+      if(!convs.length) return;
       console.log("after")
-      for (const conv of convs) {
+      for(const conv of convs){
         const messagesSnap = await this.getMessagesSnap(
           conv.roomId,
           conv.unreadCount as number
         );
-        console.log({ messagesSnap })
-
+        console.log({messagesSnap})
+        
         const messagesObj = messagesSnap.exists() ? messagesSnap.val() : {};
         const messages = Object.keys(messagesObj)
-          .map((k) => ({
-            ...messagesObj[k],
-            msgId: k,
-            timestamp: messagesObj[k].timestamp ?? 0,
-          }))
-          .sort((a, b) => a.timestamp - b.timestamp);
-
+        .map((k) => ({
+          ...messagesObj[k],
+          msgId: k,
+          timestamp: messagesObj[k].timestamp ?? 0,
+        }))
+        .sort((a, b) => a.timestamp - b.timestamp);
+        
         for (const m of messages) {
-
+          
           if (m.msgId)
             console.log("message object is called")
           await this.markAsDelivered(
@@ -897,14 +1015,9 @@ export class FirebaseChatService {
 
       const snapToMsg = async (s: DataSnapshot): Promise<any> => {
         const payload = s.val() ?? {};
-        // console.log("payload",payload);
         const decryptedText = await this.encryptionService.decrypt(
           payload.text as string
         );
-          const decryptedtranslatedText = await this.encryptionService.decrypt(
-          payload.translatedText as string
-        );
-
         let cdnUrl = '';
         if (payload.attachment) {
           const res = await firstValueFrom(
@@ -917,7 +1030,6 @@ export class FirebaseChatService {
           isMe: payload.sender === this.senderId,
           ...payload,
           text: decryptedText,
-          translatedText: decryptedtranslatedText,
           ...(payload.attachment && {
             attachment: { ...payload.attachment, previewUrl: cdnUrl },
           }),
@@ -1172,8 +1284,8 @@ export class FirebaseChatService {
                 localConv?.lastMessageAt instanceof Date
                   ? localConv.lastMessageAt.getTime()
                   : typeof localConv?.lastMessageAt === 'number'
-                    ? Number(localConv.lastMessageAt)
-                    : Date.now(),
+                  ? Number(localConv.lastMessageAt)
+                  : Date.now(),
               lastmessageType:
                 (localConv?.lastMessageType as IChatMeta['lastmessageType']) ??
                 'text',
@@ -1326,8 +1438,8 @@ export class FirebaseChatService {
                 localConv?.lastMessageAt instanceof Date
                   ? localConv.lastMessageAt.getTime()
                   : typeof localConv?.lastMessageAt === 'number'
-                    ? Number(localConv?.lastMessageAt)
-                    : Date.now(),
+                  ? Number(localConv?.lastMessageAt)
+                  : Date.now(),
               lastmessageType:
                 (localConv?.lastMessageType as IChatMeta['lastmessageType']) ??
                 'text',
@@ -1411,8 +1523,8 @@ export class FirebaseChatService {
                 localConv?.lastMessageAt instanceof Date
                   ? localConv.lastMessageAt.getTime()
                   : typeof localConv?.lastMessageAt === 'number'
-                    ? Number(localConv.lastMessageAt)
-                    : Date.now(),
+                  ? Number(localConv.lastMessageAt)
+                  : Date.now(),
               lastmessageType:
                 (localConv?.lastMessageType as IChatMeta['lastmessageType']) ??
                 'text',
@@ -1525,7 +1637,7 @@ export class FirebaseChatService {
       return () => {
         try {
           off();
-        } catch (e) { }
+        } catch (e) {}
       };
     });
   }
@@ -1555,7 +1667,7 @@ export class FirebaseChatService {
       return () => {
         try {
           off();
-        } catch (e) { }
+        } catch (e) {}
       };
     });
   }
@@ -1572,32 +1684,12 @@ export class FirebaseChatService {
   // =====================
 
   async sendMessage(msg: Partial<IMessage & { attachment: IAttachment }>) {
-    console.log("khusha testing", msg);
-    //     {
-    //     "msgId": "2ad4fa3a-6d41-4c7a-a65d-b3bb013dcf8b",
-    //     "roomId": "",
-    //     "sender": "52",
-    //     "type": "text",
-    //     "text": "hello",
-    //     "timestamp": 1761241393597,
-    //     "replyToMsgId": "",
-    //     "isEdit": false,
-    //     "reactions": [],
-    //     "isTranslated": true,
-    //     "translatedIn": "Hindi",
-    //     "translatedText": "नमस्ते",
-    //     "status": "pending"
-    // }
-    //will tomorrow save data accrdoing to this struecutr in db
     try {
       const { attachment, ...message } = msg;
       const roomId = this.currentChat?.roomId as string;
       const members = this.currentChat?.members || roomId.split('_');
       const encryptedText = await this.encryptionService.encrypt(
         msg.text as string
-      );
-      const encryptedTranslatedText = await this.encryptionService.encrypt(
-        msg.translatedText as string
       );
       const messageToSave = {
         ...message,
@@ -1618,11 +1710,7 @@ export class FirebaseChatService {
         type: this.currentChat?.type || 'private',
         lastmessageAt: message.timestamp as string,
         lastmessageType: attachment ? attachment.type : 'text',
-        //if translated exist non empty then show acc then show acc in last message encryptedTranslatedText else encryptedText
-        // lastmessage: encryptedText || '',
-        lastmessage: msg.isTranslated ? encryptedTranslatedText : encryptedText,
-
-
+        lastmessage: encryptedText || '',
       };
 
       for (const member of members) {
@@ -1634,29 +1722,21 @@ export class FirebaseChatService {
             isArhived: false,
             isPinned: false,
             isLocked: false,
-            unreadCount: member == this.senderId ? 0 : 1,
+            unreadCount: member==this.senderId ? 0 : 1,
           });
         } else {
           await rtdbUpdate(ref, {
             ...meta,
-            ...(member !== this.senderId && { unreadCount: (idxSnap.val().unreadCount || 0) + 1 })
+           ...(member!==this.senderId && { unreadCount: (idxSnap.val().unreadCount || 0) + 1})
           });
         }
       }
 
       const messagesRef = ref(this.db, `chats/${roomId}/${message.msgId}`);
-      // await rtdbSet(messagesRef, {
-      //   ...messageToSave,
-      //   text: encryptedText,
-      // });
       await rtdbSet(messagesRef, {
         ...messageToSave,
         text: encryptedText,
-        isTranslated: msg.isTranslated || false,
-        translatedIn: msg.translatedIn || '',
-        translatedText: encryptedTranslatedText || '',
       });
-
 
       for (const member of members) {
         if (member === this.senderId) continue;
@@ -1666,34 +1746,18 @@ export class FirebaseChatService {
           console.log('mark delivered clicked');
         }
       }
-
-      const messageForSQLite = {
-        ...messageToSave,
-        isMe: true,
-        isTranslated: msg.isTranslated || false,
-        translatedIn: msg.translatedIn || '',
-        translatedText: msg.translatedText || '', // decrypted or plain text version
-      };
-
       if (attachment) {
         this.sqliteService.saveAttachment(attachment);
-        this.sqliteService.saveMessage(messageForSQLite as IMessage);
+        this.sqliteService.saveMessage({
+          ...messageToSave,
+          isMe: true,
+        } as IMessage);
       } else {
-        this.sqliteService.saveMessage(messageForSQLite as IMessage);
+        this.sqliteService.saveMessage({
+          ...messageToSave,
+          isMe: true,
+        } as IMessage);
       }
-
-      // if (attachment) {
-      //   this.sqliteService.saveAttachment(attachment);
-      //   this.sqliteService.saveMessage({
-      //     ...messageToSave,
-      //     isMe: true,
-      //   } as IMessage);
-      // } else {
-      //   this.sqliteService.saveMessage({
-      //     ...messageToSave,
-      //     isMe: true,
-      //   } as IMessage);
-      // }
       this.pushMsgToChat({
         ...messageToSave,
         isMe: true,
@@ -1703,154 +1767,6 @@ export class FirebaseChatService {
     }
   }
 
-  // async sendMessage(msg: Partial<IMessage & { attachment: IAttachment }>) {
-  //   try {
-  //     const { attachment, ...message } = msg;
-  //     const roomId = this.currentChat?.roomId as string;
-  //     if (!roomId) throw new Error('No roomId in currentChat');
-
-  //     const members = this.currentChat?.members || roomId.split('_');
-
-  //     // ensure msgId and timestamp exist
-  //     const msgId = (message.msgId as string) || uuidv4();
-  //     const timestamp = (message.timestamp as any) || Date.now();
-
-  //     // Plaintext values (UI/local)
-  //     const originalPlain = (msg.text || '').toString();
-  //     const translatedPlain = (msg.translatedText || '').toString();
-  //     const isTranslated = !!msg.isTranslated;
-  //     const translatedIn = msg.translatedIn || '';
-
-  //     // Encrypt original and translated (if present)
-  //     const encryptedOriginal = originalPlain
-  //       ? await this.encryptionService.encrypt(originalPlain)
-  //       : '';
-  //     const encryptedTranslated =
-  //       isTranslated && translatedPlain
-  //         ? await this.encryptionService.encrypt(translatedPlain)
-  //         : '';
-
-  //     // Prepare message object to save to remote DB (encrypted fields)
-  //     const messageToSave: Partial<IMessage> = {
-  //       ...message,
-  //       msgId,
-  //       timestamp,
-  //       status: 'sent',
-  //       roomId,
-  //       // store encrypted values in remote DB
-  //       text: encryptedOriginal,
-  //       translatedText: encryptedTranslated,
-  //       isTranslated,
-  //       translatedIn,
-  //       receipts: {
-  //         read: {
-  //           status: false,
-  //           readBy: [],
-  //         },
-  //         delivered: {
-  //           status: false,
-  //           deliveredTo: [],
-  //         },
-  //       },
-  //     };
-
-  //     // Prepare meta for userchats index.
-  //     const lastmessageEncrypted = encryptedTranslated || encryptedOriginal || '';
-  //     const meta: Partial<IChatMeta> = {
-  //       type: this.currentChat?.type || 'private',
-  //       lastmessageAt: timestamp,
-  //       lastmessageType: attachment ? attachment.type : 'text',
-  //       lastmessage: lastmessageEncrypted,
-  //     };
-
-  //     // Update per-member userchats (create or update with unreadCount)
-  //     for (const member of members) {
-  //       const uRef = rtdbRef(this.db, `userchats/${member}/${roomId}`);
-  //       const idxSnap = await rtdbGet(uRef);
-  //       if (!idxSnap.exists()) {
-  //         await rtdbSet(uRef, {
-  //           ...meta,
-  //           isArhived: false,
-  //           isPinned: false,
-  //           isLocked: false,
-  //           unreadCount: member === this.senderId ? 0 : 1,
-  //         });
-  //       } else {
-  //         await rtdbUpdate(uRef, {
-  //           ...meta,
-  //           ...(member !== this.senderId && {
-  //             unreadCount: (idxSnap.val().unreadCount || 0) + 1,
-  //           }),
-  //         });
-  //       }
-  //     }
-
-  //     // Save message to RTDB (encrypted payload)
-  //     const messagesRef = rtdbRef(this.db, `chats/${roomId}/${msgId}`);
-  //     await rtdbSet(messagesRef, {
-  //       ...messageToSave,
-  //       text: messageToSave.text || '',
-  //       translatedText: messageToSave.translatedText || '',
-  //       isTranslated: messageToSave.isTranslated || false,
-  //       translatedIn: messageToSave.translatedIn || '',
-  //     });
-
-  //     // Mark as delivered for online receivers
-  //     for (const member of members) {
-  //       if (member === this.senderId) continue;
-  //       const isReceiverOnline = !!this.membersPresence.get(member)?.isOnline;
-  //       if (isReceiverOnline) {
-  //         this.markAsDelivered(msgId, member);
-  //       }
-  //     }
-
-  //     // Save to SQLite (local copy) — use decrypted/plain values for immediate rendering
-  //     const localSaveMsg: IMessage = {
-  //       msgId,
-  //       roomId,
-  //       sender: (message.sender ?? this.senderId) as string,
-  //       type: (message.type as any) || (attachment ? attachment.type : 'text'),
-  //       text: originalPlain,
-  //       translatedText: translatedPlain,
-  //       isTranslated,
-  //       translatedIn,
-  //       localUrl: message.localUrl || '',
-  //       cdnUrl: message.cdnUrl || '',
-  //       mediaId: message.mediaId || '',
-  //       isMe: true,
-  //       status: 'sent',
-  //       timestamp,
-  //       deletedFor: message.deletedFor || { everyone: false, users: [] },
-  //       reactions: message.reactions || [],
-  //       replyToMsgId: message.replyToMsgId || '',
-  //       isEdit: !!message.isEdit,
-  //       isForwarded: !!message.isForwarded,
-  //       receipts: message.receipts || {
-  //         read: { status: false, readBy: [] },
-  //         delivered: { status: false, deliveredTo: [] },
-  //       },
-  //     };
-
-  //     if (attachment) {
-  //       // persist attachment locally
-  //       this.sqliteService.saveAttachment(attachment);
-  //       localSaveMsg.mediaId = attachment.mediaId || localSaveMsg.mediaId;
-  //     }
-
-  //     // Save readable message locally
-  //     this.sqliteService.saveMessage(localSaveMsg);
-
-  //     // push message into in-memory chat for immediate UI render (use decrypted values)
-  //     this.pushMsgToChat({
-  //       ...localSaveMsg,
-  //       isMe: true,
-  //     } as IMessage);
-  //   } catch (error) {
-  //     console.error('Error in sending message', error);
-  //   }
-  // }
-
-
   // Pinned message operations
   async pinMessage(message: PinnedMessage) {
     const key = message.roomId;
@@ -1858,7 +1774,7 @@ export class FirebaseChatService {
     const snapshot = await get(pinRef);
 
     const pinData = {
-      key: message.key,
+      // key: message.key,
       roomId: message.roomId,
       messageId: message.messageId,
       pinnedBy: message.pinnedBy,
@@ -1896,6 +1812,28 @@ export class FirebaseChatService {
       console.error('Error unpinning message:', error);
     }
   }
+
+  async editMessage(roomId: string, msgId: string, newText: string): Promise<void> {
+  try {
+    if (!roomId || !msgId || !newText.trim()) {
+      throw new Error('editMessageInDb: Missing required parameters');
+    }
+
+    const encryptedText = await this.encryptionService.encrypt(newText.trim());
+    const msgRef = rtdbRef(this.db, `chats/${roomId}/${msgId}`);
+
+    await rtdbUpdate(msgRef, {
+      text: encryptedText,
+      isEdit: true,
+      editedAt: Date.now(),
+    });
+
+    console.log(`✅ Message ${msgId} updated successfully in ${roomId}`);
+  } catch (err) {
+    console.error('❌ editMessageInDb error:', err);
+    throw err;
+  }
+}
 
   // Group and community operations
   // async createGroup(
@@ -2029,10 +1967,104 @@ export class FirebaseChatService {
   }
 
   async updateBackendGroupId(groupId: string, backendGroupId: string) {
-    const db = getDatabase();
-    const groupRef = ref(db, `groups/${groupId}/backendGroupId`);
+    const groupRef = ref(this.db, `groups/${groupId}/backendGroupId`);
     await set(groupRef, backendGroupId);
   }
+
+
+async getGroupAdminIds(groupId: string): Promise<string[]> {
+  try {
+    const adminIdsRef = ref(this.db, `groups/${groupId}/adminIds`);
+    const snapshot = await get(adminIdsRef);
+    return snapshot.exists() ? snapshot.val() : [];
+  } catch (error) {
+    console.error('Error fetching admin IDs:', error);
+    return [];
+  }
+}
+
+/**
+ * Check if a user is admin in a group
+ */
+async isUserAdmin(groupId: string, userId: string): Promise<boolean> {
+  try {
+    const adminIds = await this.getGroupAdminIds(groupId);
+    return adminIds.includes(String(userId));
+  } catch (error) {
+    console.error('Error checking admin status:', error);
+    return false;
+  }
+}
+
+/**
+ * Make a user admin in a group
+ */
+async makeGroupAdmin(groupId: string, userId: string): Promise<boolean> {
+  try {
+    const adminIdsRef = ref(this.db, `groups/${groupId}/adminIds`);
+    
+    // Get current adminIds
+    const snapshot = await get(adminIdsRef);
+    const currentAdminIds: string[] = snapshot.exists() ? snapshot.val() : [];
+    
+    // Add new admin if not already present
+    if (!currentAdminIds.includes(String(userId))) {
+      currentAdminIds.push(String(userId));
+      await set(adminIdsRef, currentAdminIds);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error('Error making user admin:', error);
+    return false;
+  }
+}
+
+/**
+ * Remove admin privileges from a user
+ */
+async dismissGroupAdmin(groupId: string, userId: string): Promise<boolean> {
+  try {
+    const adminIdsRef = ref(this.db, `groups/${groupId}/adminIds`);
+    
+    // Get current adminIds
+    const snapshot = await get(adminIdsRef);
+    const currentAdminIds: string[] = snapshot.exists() ? snapshot.val() : [];
+    
+    // Remove admin
+    const updatedAdminIds = currentAdminIds.filter(id => String(id) !== String(userId));
+    await set(adminIdsRef, updatedAdminIds);
+    
+    return true;
+  } catch (error) {
+    console.error('Error dismissing admin:', error);
+    return false;
+  }
+}
+
+/**
+ * Get admin check details for action sheet
+ */
+async getAdminCheckDetails(groupId: string, currentUserId: string, targetUserId: string) {
+  try {
+    const adminIds = await this.getGroupAdminIds(groupId);
+    
+    return {
+      adminIds,
+      isCurrentUserAdmin: adminIds.includes(String(currentUserId)),
+      isTargetUserAdmin: adminIds.includes(String(targetUserId)),
+      isSelf: String(targetUserId) === String(currentUserId)
+    };
+  } catch (error) {
+    console.error('Error getting admin check details:', error);
+    return {
+      adminIds: [],
+      isCurrentUserAdmin: false,
+      isTargetUserAdmin: false,
+      isSelf: false
+    };
+  }
+}
 
   async createCommunity(
     communityId: string,
@@ -2160,60 +2192,134 @@ export class FirebaseChatService {
     return userGroups;
   }
 
-  async fetchGroupWithProfiles(
-    groupId: string
-  ): Promise<{ groupName: string; groupMembers: any[] }> {
-    try {
-      const db = getDatabase();
-      const groupRef = ref(db, `groups/${groupId}`);
-      const snapshot = await get(groupRef);
+  // async fetchGroupWithProfiles(
+  //   groupId: string
+  // ): Promise<{ groupName: string; groupMembers: any[] }> {
+  //   try {
+  //     const db = getDatabase();
+  //     const groupRef = ref(db, `groups/${groupId}`);
+  //     const snapshot = await get(groupRef);
 
-      if (!snapshot.exists()) {
-        return { groupName: 'Group', groupMembers: [] };
-      }
+  //     if (!snapshot.exists()) {
+  //       return { groupName: 'Group', groupMembers: [] };
+  //     }
 
-      const groupData = snapshot.val();
-      const groupName = groupData.name || 'Group';
+  //     const groupData = snapshot.val();
+  //     const groupName = groupData.name || 'Group';
 
-      const rawMembers = groupData.members || {};
-      const members: any[] = Object.entries(rawMembers).map(
-        ([userId, userData]: [string, any]) => ({
-          user_id: userId,
-          phone_number: userData?.phone_number,
-          ...userData,
-        })
-      );
+  //     const rawMembers = groupData.members || {};
+  //     const members: any[] = Object.entries(rawMembers).map(
+  //       ([userId, userData]: [string, any]) => ({
+  //         user_id: userId,
+  //         phone_number: userData?.phone_number,
+  //         ...userData,
+  //       })
+  //     );
 
-      const membersWithProfiles = await Promise.all(
-        members.map(async (m) => {
-          try {
-            const res: any = await firstValueFrom(
-              this.service.getUserProfilebyId(String(m.user_id))
-            );
-            m.avatar =
-              res?.profile || m.avatar || 'assets/images/default-avatar.png';
-            m.name = m.name || res?.name || `User ${m.user_id}`;
-            m.publicKeyHex = res?.publicKeyHex || m.publicKeyHex || null;
-            m.phone_number =
-              m.phone_number || res?.phone_number || m.phone_number;
-          } catch (err) {
-            console.warn(
-              `fetchGroupWithProfiles: failed to fetch profile for ${m.user_id}`,
-              err
-            );
-            m.avatar = m.avatar || 'assets/images/default-avatar.png';
-            m.name = m.name || `User ${m.user_id}`;
-          }
-          return m;
-        })
-      );
+  //     const membersWithProfiles = await Promise.all(
+  //       members.map(async (m) => {
+  //         try {
+  //           const res: any = await firstValueFrom(
+  //             this.service.getUserProfilebyId(String(m.user_id))
+  //           );
+  //           m.avatar =
+  //             res?.profile || m.avatar || 'assets/images/default-avatar.png';
+  //           m.name = m.name || res?.name || `User ${m.user_id}`;
+  //           m.publicKeyHex = res?.publicKeyHex || m.publicKeyHex || null;
+  //           m.phone_number =
+  //             m.phone_number || res?.phone_number || m.phone_number;
+  //         } catch (err) {
+  //           console.warn(
+  //             `fetchGroupWithProfiles: failed to fetch profile for ${m.user_id}`,
+  //             err
+  //           );
+  //           m.avatar = m.avatar || 'assets/images/default-avatar.png';
+  //           m.name = m.name || `User ${m.user_id}`;
+  //         }
+  //         return m;
+  //       })
+  //     );
 
-      return { groupName, groupMembers: membersWithProfiles };
-    } catch (err) {
-      console.error('fetchGroupWithProfiles error', err);
-      return { groupName: 'Group', groupMembers: [] };
+  //     return { groupName, groupMembers: membersWithProfiles };
+  //   } catch (err) {
+  //     console.error('fetchGroupWithProfiles error', err);
+  //     return { groupName: 'Group', groupMembers: [] };
+  //   }
+  // }
+
+  async fetchGroupWithProfiles(groupId: string): Promise<{
+  groupName: string;
+  groupMembers: Array<{
+    user_id: string;
+    username: string;
+    phone: string;
+    phoneNumber: string;
+    avatar?: string;
+    role?: string;
+    isActive?: boolean;
+    publicKeyHex?: string | null;
+  }>;
+}> {
+  const db = getDatabase();
+  const groupRef = ref(db, `groups/${groupId}`);
+
+  try {
+    const snapshot = await get(groupRef);
+    if (!snapshot.exists()) {
+      console.warn(`Group ${groupId} not found`);
+      return { groupName: 'Unknown Group', groupMembers: [] };
     }
+
+    const groupData = snapshot.val() as IGroup;
+    const groupName = groupData.title || 'Unnamed Group';
+    const members = groupData.members || {};
+
+    // Get admin IDs
+    const adminIds = groupData.adminIds || [];
+
+    const memberPromises = Object.entries(members).map(async ([userId, memberData]) => {
+      try {
+        const userProfileRes: any = await firstValueFrom(
+          this.service.getUserProfilebyId(userId)
+        );
+        
+        return {
+          user_id: userId,
+          username: memberData.username,
+          phone: memberData.phoneNumber,
+          phoneNumber: memberData.phoneNumber,
+          avatar: userProfileRes?.profile || 'assets/images/user.jfif',
+          isActive: memberData.isActive ?? true,
+          role: adminIds.includes(userId) ? 'admin' : 'member',
+          publicKeyHex: null
+        };
+      } catch (err) {
+        console.warn(`Failed to fetch profile for user ${userId}`, err);
+        return {
+          user_id: userId,
+          username: memberData.username,
+          phone: memberData.phoneNumber,
+          phoneNumber: memberData.phoneNumber,
+          avatar: 'assets/images/user.jfif',
+          isActive: memberData.isActive ?? true,
+          role: adminIds.includes(userId) ? 'admin' : 'member',
+          publicKeyHex: null
+        };
+      }
+    });
+
+    const groupMembers = await Promise.all(memberPromises);
+
+    return {
+      groupName,
+      groupMembers: groupMembers.filter(m => m.isActive !== false)
+    };
+  } catch (error) {
+    console.error('Error fetching group with profiles:', error);
+    return { groupName: 'Error Loading Group', groupMembers: [] };
   }
+}
+
 
   async getGroupsInCommunity(communityId: string): Promise<string[]> {
     const snapshot = await get(
@@ -2299,7 +2405,7 @@ export class FirebaseChatService {
     if (!snap.exists()) {
       try {
         await update(rtdbRef(db, `/unreadCounts/${roomId}`), { [userId]: 0 });
-      } catch { }
+      } catch {}
       return 0;
     }
 
@@ -2336,7 +2442,7 @@ export class FirebaseChatService {
     for (const rid of roomIds) {
       try {
         total += await this.markRoomAsRead(rid, userId);
-      } catch { }
+      } catch {}
     }
     return total;
   }
@@ -2352,7 +2458,7 @@ export class FirebaseChatService {
     try {
       const snap = await get(rtdbRef(db, `unreadCounts/${roomId}/${userId}`));
       current = snap.exists() ? Number(snap.val() || 0) : 0;
-    } catch { }
+    } catch {}
 
     const updates: Record<string, any> = {};
     updates[`unreadChats/${userId}/${roomId}`] = true;
@@ -2401,6 +2507,181 @@ export class FirebaseChatService {
     await update(rtdbRef(db, '/'), updates);
   }
 
+  async getGroupDetails(groupId: string): Promise<{
+  adminIds: string[];
+  members: Array<Record<string, any>>;
+} | null> {
+  try {
+    if (!groupId) return null;
+    const groupRef = ref(this.db, `groups/${groupId}`);
+    const snap = await get(groupRef);
+    if (!snap.exists()) return null;
+
+    const groupData: any = snap.val() || {};
+
+    // normalize adminIds (support array / object / single value)
+    let adminIdsRaw = groupData.adminIds ?? groupData.adminIdsList ?? null;
+    let adminIds: string[] = [];
+
+    if (Array.isArray(adminIdsRaw)) {
+      adminIds = adminIdsRaw.filter(Boolean).map((id) => String(id));
+    } else if (adminIdsRaw && typeof adminIdsRaw === 'object') {
+      // could be { "0": "78" } or { "78": true }
+      const vals = Object.values(adminIdsRaw);
+      // if values are booleans (true), fall back to keys
+      const areValuesBoolean = vals.length && vals.every((v) => typeof v === 'boolean');
+      if (areValuesBoolean) {
+        adminIds = Object.keys(adminIdsRaw).map((k) => String(k));
+      } else {
+        adminIds = vals.filter(Boolean).map((v) => String(v));
+      }
+    } else if (adminIdsRaw !== null && adminIdsRaw !== undefined) {
+      adminIds = [String(adminIdsRaw)];
+    }
+
+    // dedupe and return
+    adminIds = Array.from(new Set(adminIds));
+
+    // normalize members (object -> array of { user_id, ...data })
+    const membersObj: Record<string, any> = groupData.members || {};
+    const members = Object.keys(membersObj).map((userId) => ({
+      user_id: String(userId),
+      ...(membersObj[userId] || {}),
+    }));
+
+    return { adminIds, members };
+  } catch (err) {
+    console.error('getGroupDetails error', err);
+    return null;
+  }
+}
+
+  async addMembersToGroup(roomId : string, userIds : string[]){
+    try {
+      const memberRef = rtdbRef(
+      this.db,
+      `groups/${roomId}/members`
+    );
+    const snap = await rtdbGet(memberRef);
+    const members : IGroup["members"] = snap.val();
+    const newMembers : IGroup["members"] = {}
+    for(const userId of userIds){
+
+      console.log(this.currentUsers,"this.currentUsers")
+      const user = this.currentUsers.find(u=> u.userId == userId)
+      console.log(user,"this.currentUsers")
+      newMembers[userId] = {isActive : true, phoneNumber : user?.phoneNumber as string, username : user?.username as string}
+    }
+    console.log({newMembers})
+    await rtdbSet(memberRef, {...members, ...newMembers})
+    } catch (error) {
+      console.error("Error adding members in group", error);
+    }
+  }
+
+ async removeMembersToGroup(roomId: string, userIds: string[]) {
+  try {
+    // console.log("groupId and memmber.userId from firebase chat service", roomId, userIds)
+    const memberRef = rtdbRef(this.db, `groups/${roomId}/members`);
+    const pastMemberRef = rtdbRef(this.db, `groups/${roomId}/pastmembers`);
+
+    // Fetch current members snapshot
+    const snap = await rtdbGet(memberRef);
+    const members: IGroup['members'] = snap.exists() ? snap.val() : {};
+
+    if (!members || Object.keys(members).length === 0) {
+      console.warn(`No members found for group ${roomId}`);
+      return;
+    }
+
+    // Prepare updates
+    const updates: Record<string, any> = {};
+
+    for (const userId of userIds) {
+      const member = members[userId];
+      if (!member) continue;
+
+      // updates[`groups/${roomId}/members/${userId}`] = {
+      //   ...member,
+      //   isActive: false,
+      //   // status: 'removed',
+      // };
+
+       updates[`groups/${roomId}/members/${userId}`] = null
+
+      updates[`groups/${roomId}/pastmembers/${userId}`] = {
+        ...member,
+        removedAt: new Date().toISOString(),
+      };
+    }
+
+    // Apply updates atomically
+    await rtdbUpdate(rtdbRef(this.db), updates);
+
+    console.log(`✅ Successfully removed ${userIds.length} members from group ${roomId}`);
+  } catch (error) {
+    console.error('❌ Error removing members from group:', error);
+  }
+}
+
+async getBackendGroupId(firebaseGroupId: string): Promise<number | null> {
+    try {
+      const db = getDatabase();
+      const groupRef = ref(db, `groups/${firebaseGroupId}/backendGroupId`);
+      const snapshot = await get(groupRef);
+      return snapshot.exists() ? snapshot.val() : null;
+    } catch (error) {
+      console.error('Error getting backend group ID:', error);
+      return null;
+    }
+  }
+
+async exitGroup(roomId: string, userIds: string[]) {
+  try {
+    // console.log("this exit group function is called", roomId, userIds)
+    const memberRef = rtdbRef(this.db, `groups/${roomId}/members`);
+
+    // Fetch current members snapshot
+    const snap = await rtdbGet(memberRef);
+    const members: IGroup['members'] = snap.exists() ? snap.val() : {};
+
+    if (!members || Object.keys(members).length === 0) {
+      console.warn(`No members found for group ${roomId}`);
+      return;
+    }
+
+    // Prepare updates
+    const updates: Record<string, any> = {};
+
+    for (const userId of userIds) {
+      const member = members[userId];
+      if (!member) {
+        console.warn(`Member ${userId} not found in group ${roomId}`);
+        continue;
+      }
+
+      // Remove from members (set to null to delete)
+      updates[`groups/${roomId}/members/${userId}`] = null;
+
+      // Add to pastmembers with removedAt timestamp
+      updates[`groups/${roomId}/pastmembers/${userId}`] = {
+        ...member,
+        removedAt: new Date().toISOString(),
+      };
+    }
+
+    // Apply updates atomically
+    await rtdbUpdate(rtdbRef(this.db), updates);
+
+    console.log(`✅ Successfully exited ${userIds.length} members from group ${roomId}`);
+  } catch (error) {
+    console.error('❌ Error exiting group:', error);
+    throw error; // Re-throw to handle in calling function
+  }
+}
+  
+
+
   // =====================
   // ===== DELETIONS =====
   // Message / Chat / Group deletions (soft/hard)
@@ -2426,6 +2707,68 @@ export class FirebaseChatService {
       });
     }
   }
+
+  
+async clearChatForUser(roomId?: string): Promise<void> {
+  try {
+    const targetRoomId = roomId || this.currentChat?.roomId;
+    
+    if (!targetRoomId) {
+      throw new Error('Room ID not found');
+    }
+
+    if (!this.senderId) {
+      throw new Error('senderId not set');
+    }
+
+    // Get all messages from the room
+    const messagesRef = rtdbRef(this.db, `chats/${targetRoomId}`);
+    const snapshot = await rtdbGet(messagesRef);
+
+    if (!snapshot.exists()) {
+      console.log('No messages to clear');
+      return;
+    }
+
+    const messages = snapshot.val();
+    const updates: Record<string, any> = {};
+
+    // Mark all messages as deleted for current user
+    Object.keys(messages).forEach((msgId) => {
+      const prevMsg = messages[msgId];
+      const existingUsers = prevMsg?.deletedFor?.users || [];
+      
+      // Only add if not already in the deleted users list
+      if (!existingUsers.includes(this.senderId)) {
+        updates[`chats/${targetRoomId}/${msgId}/deletedFor/users`] = [
+          ...existingUsers,
+          this.senderId
+        ];
+      }
+      
+      // Preserve everyone flag if it exists
+      if (!prevMsg?.deletedFor?.everyone) {
+        updates[`chats/${targetRoomId}/${msgId}/deletedFor/everyone`] = false;
+      }
+    });
+
+    // Apply all updates atomically
+    if (Object.keys(updates).length > 0) {
+      await rtdbUpdate(rtdbRef(this.db), updates);
+    }
+
+    // Reset unread count for this user
+    await rtdbUpdate(
+      rtdbRef(this.db, `unreadCounts/${targetRoomId}`),
+      { [this.senderId]: 0 }
+    );
+
+    console.log(`✅ Chat cleared for user ${this.senderId} in room ${targetRoomId}`);
+  } catch (error) {
+    console.error('❌ Error clearing chat for user:', error);
+    throw error;
+  }
+}
 
   async deleteMessageForMe(
     roomId: string,
@@ -2500,6 +2843,65 @@ export class FirebaseChatService {
     }
   }
 
+  //new delete chats functions
+
+  async deleteChats(
+  roomIds: string[],
+): Promise<void> {
+  try {
+    if (!this.senderId) {
+      throw new Error('senderId not set');
+    }
+
+    if (!Array.isArray(roomIds) || roomIds.length === 0) {
+      console.error('RoomIds is not an array or empty');
+      return;
+    }
+    const updates: Record<string, any> = {};
+
+    for (const roomId of roomIds) {
+      updates[`userchats/${this.senderId}/${roomId}`] = null;
+
+
+        const chatsRef = rtdbRef(this.db, `chats/${roomId}`);
+        const snapshot = await rtdbGet(chatsRef);
+        
+        if (snapshot.exists()) {
+          const messages = snapshot.val();
+          Object.keys(messages).forEach((messageKey) => {
+            updates[`chats/${roomId}/${messageKey}/deletedFor/${this.senderId}`] = true;
+          });
+        }
+        updates[`unreadCounts/${roomId}/${this.senderId}`] = 0;
+
+    }
+    await rtdbUpdate(rtdbRef(this.db), updates);
+
+    const existingConvs = this._conversations$.value.filter(
+      (c) => !roomIds.includes(c.roomId)
+    );
+    this._conversations$.next(existingConvs);
+
+    // Delete from SQLite
+    // for (const roomId of roomIds) {
+    //   try {
+    //     await this.sqliteService.deleteConversation?.(roomId);
+    //     if (deleteType !== 'forMe') {
+    //       await this.sqliteService.deleteMessages?.(roomId);
+    //     }
+    //   } catch (sqlErr) {
+    //     console.warn('SQLite deletion failed for', roomId, sqlErr);
+    //   }
+    // }
+
+    console.log(`✅ Successfully deleted ${roomIds.length} chat(s)`);
+  } catch (error) {
+    console.error('❌ Error deleting chats:', error);
+    throw error;
+  }
+}
+
+
   async deleteGroup(groupId: string): Promise<void> {
     try {
       const db = getDatabase();
@@ -2548,7 +2950,3 @@ export class FirebaseChatService {
 
   // // async deleteChatForUser(userId: string, chat: { receiver_Id: string; group?: boolean; isCommunity?: boolean }) { ... }
 }
-function uuidv4(): string {
-  throw new Error('Function not implemented.');
-}
-

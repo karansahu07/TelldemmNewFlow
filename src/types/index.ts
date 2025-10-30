@@ -68,7 +68,7 @@ export interface Message {
 
 export interface PinnedMessage {
   roomId: string;
-  key: string; // Chat room ID (1-to-1, group, community)
+  // key: string; // Chat room ID (1-to-1, group, community)
   messageId?: string; // ID of the pinned message
   pinnedBy: string; // User who pinned the message
   pinnedAt: number; // Timestamp when the message was pinned
